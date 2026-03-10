@@ -2,7 +2,7 @@
 // to avoid CORS. The API key lives server-side as LEONARDO_API_KEY.
 
 // Model ID — update this when switching between Nano Banana 2 and Nano Banana Pro
-const MODEL_ID = 'nano-banana-2'
+const MODEL_ID = 'gemini-image-2'
 
 const WIDTH = 1584
 const HEIGHT = 672
