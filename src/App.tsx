@@ -84,7 +84,7 @@ function assemblePrompt(
 
   if (cc.enabled) {
     sections.push(
-      `## Colour of Products\nWithout changing the shape, size or quantity, simply the colour of them, Apply the colours from the colour palette in ${cc.paletteRef} to ${cc.targets} but do not change the colour of anything that's already coloured, only add these colours to the white objects.`,
+      `## Colour of Products\nWithout changing the shape, size or quantity, simply change the colour of them. Apply the colours from the colour palette in ${cc.paletteRef} to ${cc.targets} but do not change the colour of anything that's already coloured — only add these colours to the white objects.`,
     )
   }
 
@@ -172,7 +172,7 @@ export default function App() {
           <div className="flex flex-col gap-3">
             <ToggleSection
               label="Product Placement"
-              description="Does the render contain product that needs to be replaced?"
+              description="Does the render contain products that need to be replaced?"
               enabled={pp.enabled}
               onToggle={() => setPp((s) => ({ ...s, enabled: !s.enabled }))}
             >
