@@ -2,18 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 
 interface PromptPreviewProps {
   assembled: string
+  copyText: string
 }
 
-function stripHeadings(text: string): string {
-  return text
-    .split('\n')
-    .filter((line) => !line.startsWith('## '))
-    .join('\n')
-    .replace(/\n{2,}/g, '\n')
-    .trim()
-}
-
-export default function PromptPreview({ assembled }: PromptPreviewProps) {
+export default function PromptPreview({ assembled, copyText }: PromptPreviewProps) {
   const [editMode, setEditMode] = useState(false)
   const [editedText, setEditedText] = useState('')
   const [copied, setCopied] = useState(false)
@@ -24,8 +16,7 @@ export default function PromptPreview({ assembled }: PromptPreviewProps) {
   }, [])
 
   const displayText = editMode ? editedText : assembled
-  const copyText = stripHeadings(displayText)
-  const charCount = copyText.length
+  const charCount = editMode ? editedText.length : copyText.length
 
   function handleEditToggle() {
     if (!editMode) {

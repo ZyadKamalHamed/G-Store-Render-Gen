@@ -4,6 +4,8 @@ import ToggleSection from './components/ToggleSection'
 import ExtrasSelector from './components/ExtrasSelector'
 import PromptPreview from './components/PromptPreview'
 import ImageUpload from './components/ImageUpload'
+import ImageGenSection from './components/ImageGenSection'
+import { stripHeadings } from './utils/stripHeadings'
 
 interface ProductPlacement {
   enabled: boolean
@@ -154,6 +156,7 @@ export default function App() {
   })
 
   const assembled = assemblePrompt(pp, cc, env, mat, lighting, extras)
+  const copyText = stripHeadings(assembled)
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -259,9 +262,11 @@ export default function App() {
 
           {/* Right column — live prompt preview */}
           <div className="lg:sticky lg:top-10">
-            <PromptPreview assembled={assembled} />
+            <PromptPreview assembled={assembled} copyText={copyText} />
           </div>
         </div>
+
+        <ImageGenSection copyText={copyText} />
       </div>
     </div>
   )
