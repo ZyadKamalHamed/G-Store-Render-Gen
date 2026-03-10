@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { initImage, uploadImage, generate, pollGeneration } from '../leonardo'
+import { uploadRender, generate, pollGeneration } from '../leonardo'
 import { activeClass } from '../utils/activeClass'
 
 type Status = 'idle' | 'uploading' | 'generating' | 'polling' | 'done' | 'error'
@@ -85,9 +85,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
     setResults([])
     try {
       setStatus('uploading')
-      const ext = image.type === 'image/png' ? 'png' : 'jpg'
-      const { id: imageId, url, fields } = await initImage(ext)
-      await uploadImage(url, fields, image)
+      const imageId = await uploadRender(image)
 
       setStatus('generating')
       const generationId = await generate(imageId, copyText, quantity)

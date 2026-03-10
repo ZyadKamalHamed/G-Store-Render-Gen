@@ -8,39 +8,31 @@ const WIDTH = 1584
 const HEIGHT = 672
 const STYLE_ID = '111dc692-d470-4eec-b791-3475abac4c46'
 
-// Step 1: Get presigned S3 upload URL
-export async function initImage(extension: 'jpg' | 'png' = 'jpg'): Promise<{ id: string; url: string; fields: Record<string, string> }> {
+// Steps 1+2: Init image + S3 upload (combined server-side to avoid S3 CORS)
+export async function uploadRender(file: File): Promise<string> {
+  const extension = file.type === 'image/png' ? 'png' : 'jpg'
+  const imageData = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      resolve(result.split(',')[1]) // strip data URL prefix
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
   let res: Response
   try {
-    res = await fetch('/api/init-image', {
+    res = await fetch('/api/upload-render', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ extension }),
+      body: JSON.stringify({ imageData, extension, mimeType: file.type }),
     })
   } catch {
-    throw new Error('Step 1 failed: could not reach /api/init-image')
+    throw new Error('Step 1-2 failed: could not reach /api/upload-render')
   }
-  if (!res.ok) throw new Error(`Step 1 failed: init-image ${res.status}`)
+  if (!res.ok) throw new Error(`Step 1-2 failed: upload-render ${res.status}`)
   const data = await res.json()
-  return {
-    id: data.uploadInitImage.id,
-    url: data.uploadInitImage.url,
-    fields: JSON.parse(data.uploadInitImage.fields),
-  }
-}
-
-// Step 2: Upload image to S3 presigned URL (direct — no proxy needed, no auth)
-export async function uploadImage(url: string, fields: Record<string, string>, file: File): Promise<void> {
-  const form = new FormData()
-  for (const [k, v] of Object.entries(fields)) form.append(k, v)
-  form.append('file', file)
-  let res: Response
-  try {
-    res = await fetch(url, { method: 'POST', body: form })
-  } catch {
-    throw new Error('Step 2 failed: could not upload to S3 (possible CORS)')
-  }
-  if (!res.ok) throw new Error(`Step 2 failed: S3 upload ${res.status}`)
+  return data.imageId
 }
 
 // Step 3: Trigger generation
