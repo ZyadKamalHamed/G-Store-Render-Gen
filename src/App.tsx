@@ -144,7 +144,7 @@ export default function App() {
   })
 
   const [lighting, setLighting] = useState(
-    'The scene overall should look cinematic, bright, warm and beautiful without any [...]. All of the lights turn on in the store giving a warm lighting from the source.',
+    'The scene overall should look cinematic, bright, warm and beautiful without any shadows. All of the lights turn on in the store giving a warm lighting from the source.',
   )
 
   const [extras, setExtras] = useState<Extras>({
