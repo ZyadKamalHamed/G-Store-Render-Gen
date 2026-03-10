@@ -36,7 +36,7 @@ Rules:
 - For Nano Banana 2: under 120 words, precise and clear over poetic`
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY)
-const gemini = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite', systemInstruction: SYSTEM_PROMPT })
+const gemini = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview', systemInstruction: SYSTEM_PROMPT })
 
 export async function generatePrompt(fields: PromptFields, model: ModelId): Promise<string> {
   const userMessage = `Generate a prompt optimised for ${MODELS[model].promptHint}.
