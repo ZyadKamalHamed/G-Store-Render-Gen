@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-harness-construction": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "5601e5ab105717b62a249aa6875482d1865433dfd89e2d7fe25166df950e13ec"
+    },
+    "agentic-engineering": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "6437efa9eac379b2701001d596610adf1f37afa02b8309145c9462c8e3cf9eff"
+    },
+    "ai-first-engineering": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "62b9568daf7bb5cbf649e55becec5739439e50c892b269c25dfe007d6a3cb54d"
+    },
+    "api-design": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "718b7be2b2c0798d4da7f79d860cc2af8ca114f55b5ff508e93c2feb468d20c2"
+    },
+    "claude-code-workflow": {
+      "source": "ilude/claude-code-config",
+      "sourceType": "github",
+      "computedHash": "d08d0768dc3ef5a29ecf5589c3b9b83d4b3912a3215ca04d92ed0e1b37bc94c4"
+    },
+    "code-reviewer": {
+      "source": "google-gemini/gemini-cli",
+      "sourceType": "github",
+      "computedHash": "270f0dd1d4c15a798bad5253a309cdc2056fe5322f99ba06ca22ce50581adc02"
+    },
+    "continuous-learning-v2": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "56565b9fd24cac54180f4c554deb3f9df5741be8d1b6b6051f7c92245f3bf7c5"
+    },
+    "cost-aware-llm-pipeline": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "f50e4b9a3fe3c2c55d0f8141b933e0b9a44c1fab38c002fd4d90d52850d71f04"
+    },
+    "cpp-coding-standards": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "46787c93ed565e48ab670ddbf8204fd144437e66ee9246fa0c651aa7a1f5bf45"
+    },
+    "css-workflow": {
+      "source": "ilude/claude-code-config",
+      "sourceType": "github",
+      "computedHash": "b8588d80c7576b16b1de3e0f3dbfe88a6701d09e926d68ad868ea700eaffc77a"
+    },
+    "deployment-patterns": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "99f83de44e287fa486828d87e0f2083e1aee7ea47b8df5768ee9786c6cda57c4"
+    },
+    "fastapi-workflow": {
+      "source": "ilude/claude-code-config",
+      "sourceType": "github",
+      "computedHash": "e29cd574b16d12176eda93bd9b6458fa4ecc4b2057d92247b8ee23f0ae7ea9f9"
+    },
+    "flask-workflow": {
+      "source": "ilude/claude-code-config",
+      "sourceType": "github",
+      "computedHash": "722976b440e3ed519a14c7f9502adcd38354926516e2ca7aec2d86b231bb191f"
+    },
+    "frontend-patterns": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "48c9438b32e62679de45e510b34f3e81b1341d4ba9aeae97b92bbd7e3e01986a"
+    },
+    "frontend-slides": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "8ee93ac0e6cf1eaf606a5a1755b34fe10af42732066b64be9fbbb08d9b81418b"
+    },
+    "pr-creator": {
+      "source": "google-gemini/gemini-cli",
+      "sourceType": "github",
+      "computedHash": "fcf4cb453f7108048631bf089ffcc426f2c00601fd97d7784b805de24eb4aa4d"
+    },
+    "search-first": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "a65ca647d87a6cc2adb054f83135388709307a9d6a070915080578fb6d9c345c"
+    },
+    "security-review": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "caf73b02e0d8312a631c793e4af1aa90863c263f98e0c73c47030d56ecfed15d"
+    },
+    "security-scan": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "92cdcaddc554e318402f066ccc073c2e3dbcfda8c2730ec62ec373f805c41a57"
+    },
+    "web-projects": {
+      "source": "ilude/claude-code-config",
+      "sourceType": "github",
+      "computedHash": "c500cfa447745d0efa0842ee0accfd1045d8f5f8b61fa70090abc7308fbbf9df"
+    }
+  }
+}
