@@ -10,12 +10,17 @@ const STYLE_ID = '111dc692-d470-4eec-b791-3475abac4c46'
 
 // Step 1: Get presigned S3 upload URL
 export async function initImage(extension: 'jpg' | 'png' = 'jpg'): Promise<{ id: string; url: string; fields: Record<string, string> }> {
-  const res = await fetch('/api/init-image', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ extension }),
-  })
-  if (!res.ok) throw new Error(`init-image failed: ${res.status}`)
+  let res: Response
+  try {
+    res = await fetch('/api/init-image', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ extension }),
+    })
+  } catch {
+    throw new Error('Step 1 failed: could not reach /api/init-image')
+  }
+  if (!res.ok) throw new Error(`Step 1 failed: init-image ${res.status}`)
   const data = await res.json()
   return {
     id: data.uploadInitImage.id,
@@ -29,8 +34,13 @@ export async function uploadImage(url: string, fields: Record<string, string>, f
   const form = new FormData()
   for (const [k, v] of Object.entries(fields)) form.append(k, v)
   form.append('file', file)
-  const res = await fetch(url, { method: 'POST', body: form })
-  if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`)
+  let res: Response
+  try {
+    res = await fetch(url, { method: 'POST', body: form })
+  } catch {
+    throw new Error('Step 2 failed: could not upload to S3 (possible CORS)')
+  }
+  if (!res.ok) throw new Error(`Step 2 failed: S3 upload ${res.status}`)
 }
 
 // Step 3: Trigger generation
@@ -57,7 +67,7 @@ export async function generate(imageId: string, prompt: string, quantity: number
       public: false,
     }),
   })
-  if (!res.ok) throw new Error(`generate failed: ${res.status}`)
+  if (!res.ok) throw new Error(`Step 3 failed: generate ${res.status}`)
   const data = await res.json()
   return data.generate.generationId
 }
@@ -70,7 +80,7 @@ export interface GenerationResult {
 // Step 4: Poll until complete
 export async function pollGeneration(generationId: string): Promise<GenerationResult> {
   const res = await fetch(`/api/poll?id=${generationId}`)
-  if (!res.ok) throw new Error(`poll failed: ${res.status}`)
+  if (!res.ok) throw new Error(`Step 4 failed: poll ${res.status}`)
   const data = await res.json()
   const gen = data.generations_by_pk
   return {
