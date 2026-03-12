@@ -3,7 +3,6 @@ import TipsBanner from './components/TipsBanner'
 import ToggleSection from './components/ToggleSection'
 import ExtrasSelector from './components/ExtrasSelector'
 import PromptPreview from './components/PromptPreview'
-import ImageUpload from './components/ImageUpload'
 import ImageGenSection from './components/ImageGenSection'
 import { stripHeadings } from './utils/stripHeadings'
 
@@ -257,7 +256,6 @@ export default function App() {
               onChange={(plants, lights, lightsColour) => setExtras({ plants, lights, lightsColour })}
             />
 
-            <ImageUpload />
           </div>
 
           {/* Right column — live prompt preview */}

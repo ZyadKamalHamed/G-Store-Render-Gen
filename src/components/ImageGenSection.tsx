@@ -20,7 +20,9 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
   const [preview, setPreview] = useState<string | null>(null)
   const [quantity, setQuantity] = useState<1 | 2 | 3 | 4>(1)
   const [status, setStatus] = useState<Status>('idle')
-  const [results, setResults] = useState<string[]>([])
+  const [results, setResults] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('gen-results') ?? '[]') } catch { return [] }
+  })
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -40,7 +42,6 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
   function handleFile(file: File) {
     setImage(file)
     setPreview(URL.createObjectURL(file))
-    setResults([])
     setErrorMsg(null)
     setStatus('idle')
   }
@@ -64,7 +65,11 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
         const result = await pollGeneration(generationId)
         if (result.status === 'COMPLETE') {
           clearInterval(pollIntervalRef.current!)
-          setResults(result.images)
+          setResults((prev) => {
+            const updated = [...result.images, ...prev]
+            localStorage.setItem('gen-results', JSON.stringify(updated))
+            return updated
+          })
           setStatus('done')
         } else if (result.status === 'FAILED') {
           clearInterval(pollIntervalRef.current!)
@@ -180,8 +185,21 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
       </div>
 
       {/* Results grid */}
-      {(status === 'done' || isLoading) ? (
-        <div className={`mt-8 grid gap-4 ${quantity === 1 ? 'grid-cols-1' : quantity === 2 ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
+      {(results.length > 0 || isLoading) ? (
+        <div className="mt-8">
+        {results.length > 0 && !isLoading ? (
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-xs text-neutral-500">{results.length} image{results.length !== 1 ? 's' : ''} generated</p>
+            <button
+              type="button"
+              onClick={() => { setResults([]); localStorage.removeItem('gen-results') }}
+              className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+            >
+              Clear history
+            </button>
+          </div>
+        ) : null}
+        <div className={`grid gap-4 ${quantity === 1 ? 'grid-cols-1' : quantity === 2 ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
           {isLoading
             ? Array.from({ length: quantity }).map((_, i) => (
                 <div key={i} className="aspect-video rounded-lg bg-neutral-800 animate-pulse" />
@@ -200,6 +218,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
                   </a>
                 </div>
               ))}
+        </div>
         </div>
       ) : null}
     </div>

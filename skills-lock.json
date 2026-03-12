@@ -21,6 +21,16 @@
       "sourceType": "github",
       "computedHash": "718b7be2b2c0798d4da7f79d860cc2af8ca114f55b5ff508e93c2feb468d20c2"
     },
+    "claude-code-expert": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "de7ea5916d9a121dd7da2ec88ea9743f90cf01f3a166edacd97390c1524abb8c"
+    },
+    "claude-code-guide": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "680606b4e132b7ceabd6fbb74a993845cdef60f6547dda98f1fc00608efdcea0"
+    },
     "claude-code-workflow": {
       "source": "ilude/claude-code-config",
       "sourceType": "github",
@@ -50,6 +60,21 @@
       "source": "ilude/claude-code-config",
       "sourceType": "github",
       "computedHash": "b8588d80c7576b16b1de3e0f3dbfe88a6701d09e926d68ad868ea700eaffc77a"
+    },
+    "debugger": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "0c14acf50f915ba140363664ec35ee7b24da330ce434c39a1546a236a0dc4b12"
+    },
+    "debugging-strategies": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "1984eeb5ca0876425cce546ff3d5e93773cac17c243bd6d19eb94960d1168e45"
+    },
+    "debugging-toolkit-smart-debug": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "a93033a9bcd6ec137e50aea304ab397311cfd31c89d6c1585f024e181ded2081"
     },
     "deployment-patterns": {
       "source": "affaan-m/everything-claude-code",

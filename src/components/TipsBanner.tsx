@@ -2,8 +2,7 @@ import { useState } from 'react'
 
 const tips = [
   'Input image should be 21:9 for best results',
-  'The more iterations, the worse the quality — get as much right in the first prompt',
-  'When adding people: [fill in]',
+  'The more iterations you do, the worse the quality — get as much right in the first prompt',
   'Leonardo settings: Model = Nano Banana 2 or Nano Banana Pro | Dimensions = custom 21:9 wide | Large 4K: 6336×2688 | Max characters: 1500',
 ]
 
@@ -15,7 +14,7 @@ export default function TipsBanner() {
   function toggle() {
     const next = !open
     setOpen(next)
-    try { localStorage.setItem('tips-open', String(next)) } catch {}
+    try { localStorage.setItem('tips-open', String(next)) } catch { }
   }
 
   return (
