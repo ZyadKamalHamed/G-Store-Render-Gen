@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const DATABASE_ID = '3216bc76a11e8038ae17f2117d44bf3eapi/suggest.ts'
+const DATABASE_ID = '3216bc76a11e8038ae17f2117d44bf3e'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
