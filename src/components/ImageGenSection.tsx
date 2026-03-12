@@ -32,6 +32,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
     try { return JSON.parse(localStorage.getItem('gen-results') ?? '[]') } catch { return [] }
   })
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [editedPrompt, setEditedPrompt] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const refInputRef = useRef<HTMLInputElement>(null)
@@ -127,7 +128,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
         ...refImages.map((r) => uploadRender(r.file)),
       ])
       setStatus('generating')
-      const generationId = await generate(mainImageId, refImageIds, copyText, quantity)
+      const generationId = await generate(mainImageId, refImageIds, editedPrompt ?? copyText, quantity)
       startPolling(generationId)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
@@ -265,9 +266,23 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
           {errorMsg ? <p className="text-xs text-red-400">{errorMsg}</p> : null}
         </div>
 
-        {/* Right — prompt preview */}
-        <div className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 text-sm text-neutral-300 font-mono leading-relaxed whitespace-pre-wrap min-h-[180px] overflow-y-auto max-h-[400px]">
-          {copyText || <span className="text-neutral-600">Your assembled prompt will appear here.</span>}
+        {/* Right — prompt preview (editable) */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-neutral-200">Prompt</p>
+            {editedPrompt !== null ? (
+              <button type="button" onClick={() => setEditedPrompt(null)} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
+                Reset
+              </button>
+            ) : null}
+          </div>
+          <textarea
+            value={editedPrompt ?? copyText}
+            onChange={(e) => setEditedPrompt(e.target.value)}
+            rows={12}
+            className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 text-sm text-neutral-300 font-mono leading-relaxed resize-none focus:outline-none focus:border-neutral-500 overflow-y-auto"
+            placeholder="Your assembled prompt will appear here."
+          />
         </div>
       </div>
 
