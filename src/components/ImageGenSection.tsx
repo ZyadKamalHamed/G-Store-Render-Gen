@@ -38,9 +38,12 @@ function timeAgo(ts: number): string {
 function loadResults(): GenerationEntry[] {
   try {
     const raw = JSON.parse(localStorage.getItem('gen-results') ?? '[]')
-    return raw.map((item: string | GenerationEntry) =>
+    const entries = raw.map((item: string | GenerationEntry) =>
       typeof item === 'string' ? { url: item, generatedAt: 0 } : item
     )
+    const fresh = entries.filter((e: GenerationEntry) => e.generatedAt === 0 || Date.now() - e.generatedAt < EXPIRY_MS)
+    if (fresh.length !== entries.length) localStorage.setItem('gen-results', JSON.stringify(fresh))
+    return fresh
   } catch { return [] }
 }
 
@@ -70,6 +73,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
   const refInputRef = useRef<HTMLInputElement>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isGeneratingRef = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -133,11 +137,22 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
 
   function startPolling(generationId: string) {
     setStatus('polling')
+    let attempts = 0
+    const MAX_ATTEMPTS = 40 // 40 * 3s = 2 minutes
     pollIntervalRef.current = setInterval(async () => {
+      attempts++
+      if (attempts > MAX_ATTEMPTS) {
+        clearInterval(pollIntervalRef.current!)
+        isGeneratingRef.current = false
+        setErrorMsg('Generation timed out after 2 minutes. Try again.')
+        setStatus('error')
+        return
+      }
       try {
         const result = await pollGeneration(generationId)
         if (result.status === 'COMPLETE') {
           clearInterval(pollIntervalRef.current!)
+          isGeneratingRef.current = false
           const now = Date.now()
           setResults((prev) => {
             const updated = [...result.images.map((url) => ({ url, generatedAt: now })), ...prev]
@@ -147,11 +162,13 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
           setStatus('done')
         } else if (result.status === 'FAILED') {
           clearInterval(pollIntervalRef.current!)
+          isGeneratingRef.current = false
           setErrorMsg('Generation failed on Leonardo servers.')
           setStatus('error')
         }
       } catch (err) {
         clearInterval(pollIntervalRef.current!)
+        isGeneratingRef.current = false
         setErrorMsg(err instanceof Error ? err.message : 'Polling error')
         setStatus('error')
       }
@@ -159,7 +176,8 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
   }
 
   async function handleGenerate() {
-    if (!image) return
+    if (!image || isGeneratingRef.current) return
+    isGeneratingRef.current = true
     setErrorMsg(null)
     setResults([])
     const total = 1 + refImages.length
@@ -189,6 +207,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
       startPolling(generationId)
     } catch (err) {
       setUploadProgress(null)
+      isGeneratingRef.current = false
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
       setStatus('error')
     }

@@ -63,6 +63,30 @@ function Field({
   )
 }
 
+const INTRO_SECTION =
+  '## Intro\nTurn image 1 from a render to a hyper realistic, photographic image, maintaining the colours, position and objects in the space as well as the perspective exactly.'
+
+function productSection(pp: ProductPlacement): string {
+  const ref = pp.refImage ? ` similar to reference image ${pp.refImage}` : ''
+  return `## Product Replacement\nReplace all of the ${pp.product} in/on ${pp.location} with ${pp.replacement}${ref}.`
+}
+
+function colourSection(cc: ColourChange): string {
+  return `## Colour of Products\nWithout changing the shape, size or quantity, simply change the colour of them. Apply the colours from the colour palette in ${cc.paletteRef} to ${cc.targets} but do not change the colour of anything that's already coloured — only add these colours to the white objects.`
+}
+
+function environmentSection(env: Environment): string {
+  return `## Environment\nThe white-space ${env.whiteSpace} becomes ${env.becomes}, realistically matching the aesthetic of ${env.aesthetic}.`
+}
+
+function materialsSection(mat: Materials): string {
+  return `## Textures/Materials\nThe roof and walls have ${mat.roofWalls}. The flooring of the interior ${mat.flooring}.`
+}
+
+function lightsSection(colour: string): string {
+  return `## Lights\nAll of the lights turn on in the store giving a ${colour} lighting from the source.`
+}
+
 function assemblePrompt(
   pp: ProductPlacement,
   cc: ColourChange,
@@ -71,49 +95,14 @@ function assemblePrompt(
   lighting: string,
   extras: Extras,
 ): string {
-  const sections: string[] = []
-
-  sections.push(
-    '## Intro\nTurn image 1 from a render to a hyper realistic, photographic image, maintaining the colours, position and objects in the space as well as the perspective exactly.',
-  )
-
-  if (pp.enabled) {
-    const ref = pp.refImage ? ` similar to reference image ${pp.refImage}` : ''
-    sections.push(
-      `## Product Replacement\nReplace all of the ${pp.product} in/on ${pp.location} with ${pp.replacement}${ref}.`,
-    )
-  }
-
-  if (cc.enabled) {
-    sections.push(
-      `## Colour of Products\nWithout changing the shape, size or quantity, simply change the colour of them. Apply the colours from the colour palette in ${cc.paletteRef} to ${cc.targets} but do not change the colour of anything that's already coloured — only add these colours to the white objects.`,
-    )
-  }
-
-  if (env.enabled) {
-    sections.push(
-      `## Environment\nThe white-space ${env.whiteSpace} becomes ${env.becomes}, realistically matching the aesthetic of ${env.aesthetic}.`,
-    )
-  }
-
-  if (mat.enabled) {
-    sections.push(
-      `## Textures/Materials\nThe roof and walls have ${mat.roofWalls}. The flooring of the interior ${mat.flooring}.`,
-    )
-  }
-
+  const sections: string[] = [INTRO_SECTION]
+  if (pp.enabled) sections.push(productSection(pp))
+  if (cc.enabled) sections.push(colourSection(cc))
+  if (env.enabled) sections.push(environmentSection(env))
+  if (mat.enabled) sections.push(materialsSection(mat))
   sections.push(`## Lighting\n${lighting}`)
-
-  if (extras.plants) {
-    sections.push('## Plants\nThe plants in the shot should look more luscious and realistic.')
-  }
-
-  if (extras.lights) {
-    sections.push(
-      `## Lights\nAll of the lights turn on in the store giving a ${extras.lightsColour} lighting from the source.`,
-    )
-  }
-
+  if (extras.plants) sections.push('## Plants\nThe plants in the shot should look more luscious and realistic.')
+  if (extras.lights) sections.push(lightsSection(extras.lightsColour))
   return sections.join('\n\n')
 }
 

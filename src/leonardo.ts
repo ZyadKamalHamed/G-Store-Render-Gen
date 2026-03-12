@@ -30,7 +30,11 @@ export async function uploadRender(file: File): Promise<string> {
   } catch {
     throw new Error('Step 1-2 failed: could not reach /api/upload-render')
   }
-  if (!res.ok) throw new Error(`Step 1-2 failed: upload-render ${res.status}`)
+  if (!res.ok) {
+    const errData = await res.json().catch(() => null)
+    const msg = errData?.error?.message ?? errData?.detail ?? errData?.message ?? `Upload failed (${res.status})`
+    throw new Error(msg)
+  }
   const data = await res.json()
   return data.imageId
 }
@@ -75,7 +79,11 @@ export async function generate(
       public: false,
     }),
   })
-  if (!res.ok) throw new Error(`Step 3 failed: generate ${res.status}`)
+  if (!res.ok) {
+    const errData = await res.json().catch(() => null)
+    const msg = errData?.error?.message ?? errData?.detail ?? errData?.message ?? `Generate failed (${res.status})`
+    throw new Error(msg)
+  }
   const data = await res.json()
   return data.generate.generationId
 }
@@ -88,7 +96,11 @@ export interface GenerationResult {
 // Step 4: Poll until complete
 export async function pollGeneration(generationId: string): Promise<GenerationResult> {
   const res = await fetch(`/api/poll?id=${generationId}`)
-  if (!res.ok) throw new Error(`Step 4 failed: poll ${res.status}`)
+  if (!res.ok) {
+    const errData = await res.json().catch(() => null)
+    const msg = errData?.error?.message ?? errData?.detail ?? errData?.message ?? `Poll failed (${res.status})`
+    throw new Error(msg)
+  }
   const data = await res.json()
   const gen = data.generations_by_pk
   return {

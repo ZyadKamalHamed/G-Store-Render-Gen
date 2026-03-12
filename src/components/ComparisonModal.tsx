@@ -20,18 +20,34 @@ export default function ComparisonModal({ generatedUrl, originalPreview, onClose
   }, [onClose])
 
   useEffect(() => {
-    function onMouseMove(e: MouseEvent) {
-      if (!dragging.current || !containerRef.current) return
+    function getPct(clientX: number) {
+      if (!containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
-      const pct = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100))
+      const pct = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100))
       setSplitPct(pct)
     }
+
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current) return
+      getPct(e.clientX)
+    }
     function onMouseUp() { dragging.current = false }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!dragging.current) return
+      getPct(e.touches[0].clientX)
+    }
+    function onTouchEnd() { dragging.current = false }
+
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
+    document.addEventListener('touchmove', onTouchMove, { passive: true })
+    document.addEventListener('touchend', onTouchEnd)
     return () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
+      document.removeEventListener('touchmove', onTouchMove)
+      document.removeEventListener('touchend', onTouchEnd)
     }
   }, [])
 
@@ -41,42 +57,43 @@ export default function ComparisonModal({ generatedUrl, originalPreview, onClose
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-6xl max-h-[90vh] rounded-xl overflow-hidden select-none"
+        className="relative w-full max-w-6xl rounded-xl overflow-hidden select-none"
         onClick={(e) => e.stopPropagation()}
         ref={containerRef}
       >
         {/* Labels */}
-        <div className="absolute top-3 left-3 z-20 text-xs bg-black/60 text-neutral-300 px-2 py-1 rounded">
+        <div className="absolute top-3 left-3 z-20 text-xs bg-black/60 text-neutral-300 px-2 py-1 rounded pointer-events-none">
           Original render
         </div>
-        <div className="absolute top-3 right-3 z-20 text-xs bg-black/60 text-neutral-300 px-2 py-1 rounded">
+        <div className="absolute top-3 right-3 z-20 text-xs bg-black/60 text-neutral-300 px-2 py-1 rounded pointer-events-none">
           Generated
         </div>
 
-        {/* Generated image (full width background) */}
+        {/* Invisible spacer — sizes the container to the generated image */}
+        <img
+          src={generatedUrl}
+          alt=""
+          aria-hidden
+          className="w-full block opacity-0"
+          style={{ maxHeight: '85vh', objectFit: 'contain' }}
+        />
+
+        {/* Generated image — clipped to right side of divider */}
         <img
           src={generatedUrl}
           alt="Generated"
-          className="w-full h-full object-contain block"
-          style={{ maxHeight: '85vh' }}
+          className="absolute inset-0 w-full h-full object-contain"
+          style={{ clipPath: `inset(0 0 0 ${splitPct}%)` }}
         />
 
-        {/* Original image clipped to left side */}
+        {/* Original image — clipped to left side of divider */}
         {originalPreview ? (
-          <div
-            className="absolute inset-0 overflow-hidden"
-            style={{ width: `${splitPct}%` }}
-          >
-            <img
-              src={originalPreview}
-              alt="Original render"
-              className="w-full h-full object-contain block"
-              style={{
-                width: containerRef.current?.offsetWidth ?? '100%',
-                maxHeight: '85vh',
-              }}
-            />
-          </div>
+          <img
+            src={originalPreview}
+            alt="Original render"
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{ clipPath: `inset(0 ${100 - splitPct}% 0 0)` }}
+          />
         ) : null}
 
         {/* Divider */}
@@ -85,6 +102,7 @@ export default function ComparisonModal({ generatedUrl, originalPreview, onClose
             className="absolute inset-y-0 z-10 flex items-center justify-center cursor-col-resize"
             style={{ left: `${splitPct}%`, transform: 'translateX(-50%)' }}
             onMouseDown={() => { dragging.current = true }}
+            onTouchStart={(e) => { e.stopPropagation(); dragging.current = true }}
           >
             <div className="w-0.5 h-full bg-white/60" />
             <div className="absolute w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
