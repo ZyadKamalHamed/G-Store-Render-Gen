@@ -4,6 +4,7 @@ import ToggleSection from './components/ToggleSection'
 import ExtrasSelector from './components/ExtrasSelector'
 import PromptPreview from './components/PromptPreview'
 import ImageGenSection from './components/ImageGenSection'
+import SuggestionBox from './components/SuggestionBox'
 import { stripHeadings } from './utils/stripHeadings'
 
 interface ProductPlacement {
@@ -265,6 +266,7 @@ export default function App() {
         </div>
 
         <ImageGenSection copyText={copyText} />
+        <SuggestionBox />
       </div>
     </div>
   )
