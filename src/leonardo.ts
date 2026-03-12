@@ -36,7 +36,11 @@ export async function uploadRender(file: File): Promise<string> {
 }
 
 // Step 3: Trigger generation
-export async function generate(imageId: string, prompt: string, quantity: number): Promise<string> {
+export async function generate(mainImageId: string, refImageIds: string[], prompt: string, quantity: number): Promise<string> {
+  const imageReferences = [
+    { image: { id: mainImageId, type: 'UPLOADED' }, strength: 'HIGH' },
+    ...refImageIds.map((id) => ({ image: { id, type: 'UPLOADED' }, strength: 'LOW' })),
+  ]
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -49,9 +53,7 @@ export async function generate(imageId: string, prompt: string, quantity: number
         quantity,
         seed: Math.floor(Math.random() * 2147483647),
         guidances: {
-          image_reference: [
-            { image: { id: imageId, type: 'UPLOADED' }, strength: 'MID' },
-          ],
+          image_reference: imageReferences,
         },
         style_ids: [STYLE_ID],
         prompt_enhance: 'OFF',

@@ -6,9 +6,16 @@ type Status = 'idle' | 'uploading' | 'generating' | 'polling' | 'done' | 'error'
 type LoadingStatus = 'uploading' | 'generating' | 'polling'
 
 const STATUS_LABELS: Record<LoadingStatus, string> = {
-  uploading: 'Uploading image...',
+  uploading: 'Uploading images...',
   generating: 'Queuing generation...',
   polling: 'Generating...',
+}
+
+const MAX_REFS = 8
+
+interface RefImage {
+  file: File
+  preview: string
 }
 
 interface ImageGenSectionProps {
@@ -18,6 +25,7 @@ interface ImageGenSectionProps {
 export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
   const [image, setImage] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [refImages, setRefImages] = useState<RefImage[]>([])
   const [quantity, setQuantity] = useState<1 | 2 | 3 | 4>(1)
   const [status, setStatus] = useState<Status>('idle')
   const [results, setResults] = useState<string[]>(() => {
@@ -26,6 +34,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const refInputRef = useRef<HTMLInputElement>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -34,10 +43,14 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
     }
   }, [])
 
-  // Revoke previous object URL when preview changes to prevent memory leaks
   useEffect(() => {
     return () => { if (preview) URL.revokeObjectURL(preview) }
   }, [preview])
+
+  // Revoke ref image object URLs on removal
+  useEffect(() => {
+    return () => { refImages.forEach((r) => URL.revokeObjectURL(r.preview)) }
+  }, [refImages])
 
   function handleFile(file: File) {
     setImage(file)
@@ -49,6 +62,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) handleFile(file)
+    e.target.value = ''
   }
 
   function onDrop(e: React.DragEvent) {
@@ -56,6 +70,24 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
     setIsDragging(false)
     const file = e.dataTransfer.files?.[0]
     if (file && file.type.startsWith('image/')) handleFile(file)
+  }
+
+  function onRefFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    const remaining = MAX_REFS - refImages.length
+    const toAdd = files.slice(0, remaining).map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }))
+    setRefImages((prev) => [...prev, ...toAdd])
+    e.target.value = ''
+  }
+
+  function removeRef(index: number) {
+    setRefImages((prev) => {
+      URL.revokeObjectURL(prev[index].preview)
+      return prev.filter((_, i) => i !== index)
+    })
   }
 
   function startPolling(generationId: string) {
@@ -90,10 +122,12 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
     setResults([])
     try {
       setStatus('uploading')
-      const imageId = await uploadRender(image)
-
+      const [mainImageId, ...refImageIds] = await Promise.all([
+        uploadRender(image),
+        ...refImages.map((r) => uploadRender(r.file)),
+      ])
       setStatus('generating')
-      const generationId = await generate(imageId, copyText, quantity)
+      const generationId = await generate(mainImageId, refImageIds, copyText, quantity)
       startPolling(generationId)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
@@ -116,35 +150,90 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* Left — upload + controls */}
         <div className="flex flex-col gap-4">
-          {/* Drop zone */}
-          <div
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={onDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`relative border-2 border-dashed rounded-lg cursor-pointer transition-colors min-h-[180px] flex items-center justify-center overflow-hidden ${
-              isDragging ? 'border-neutral-400 bg-neutral-800' : 'border-neutral-700 hover:border-neutral-500 bg-neutral-900'
-            }`}
-          >
+          {/* Main render drop zone */}
+          <div>
+            <p className="text-sm font-medium text-neutral-200 mb-2">Main render</p>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={onDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-lg cursor-pointer transition-colors min-h-[180px] flex items-center justify-center overflow-hidden ${
+                isDragging ? 'border-neutral-400 bg-neutral-800' : 'border-neutral-700 hover:border-neutral-500 bg-neutral-900'
+              }`}
+            >
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChange} className="sr-only" />
+              {preview ? (
+                <img src={preview} alt="Main render preview" className="w-full h-full object-cover max-h-[240px]" />
+              ) : (
+                <div className="text-center px-6 py-8">
+                  <p className="text-neutral-400 text-sm">Drop your render here</p>
+                  <p className="text-neutral-600 text-xs mt-1">or click to browse</p>
+                </div>
+              )}
+            </div>
+            {image ? <p className="text-xs text-neutral-500 mt-1 truncate">{image.name}</p> : null}
+          </div>
+
+          {/* Reference images */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-neutral-200">
+                Reference images
+                <span className="text-neutral-600 font-normal ml-2">({refImages.length}/{MAX_REFS})</span>
+              </p>
+              {refImages.length < MAX_REFS ? (
+                <button
+                  type="button"
+                  onClick={() => refInputRef.current?.click()}
+                  className="text-xs text-neutral-400 hover:text-white transition-colors"
+                >
+                  + Add
+                </button>
+              ) : null}
+            </div>
             <input
-              ref={fileInputRef}
+              ref={refInputRef}
               type="file"
               accept="image/*"
-              onChange={onFileChange}
+              multiple
+              onChange={onRefFilesChange}
               className="sr-only"
             />
-            {preview ? (
-              <img src={preview} alt="Upload preview" className="w-full h-full object-cover max-h-[240px]" />
-            ) : (
-              <div className="text-center px-6 py-8">
-                <p className="text-neutral-400 text-sm">Drop your render here</p>
-                <p className="text-neutral-600 text-xs mt-1">or click to browse</p>
+            {refImages.length > 0 ? (
+              <div className="grid grid-cols-4 gap-2">
+                {refImages.map((ref, i) => (
+                  <div key={i} className="relative group aspect-square rounded-md overflow-hidden bg-neutral-800">
+                    <img src={ref.preview} alt={`Reference ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeRef(i)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-neutral-900/80 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {refImages.length < MAX_REFS ? (
+                  <button
+                    type="button"
+                    onClick={() => refInputRef.current?.click()}
+                    className="aspect-square rounded-md border-2 border-dashed border-neutral-700 hover:border-neutral-500 flex items-center justify-center text-neutral-600 hover:text-neutral-400 transition-colors text-xl"
+                  >
+                    +
+                  </button>
+                ) : null}
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => refInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-neutral-800 hover:border-neutral-700 rounded-lg py-4 text-xs text-neutral-600 hover:text-neutral-500 transition-colors"
+              >
+                Add colour palettes, material references, etc. (optional)
+              </button>
             )}
           </div>
-          {image ? (
-            <p className="text-xs text-neutral-500 -mt-2 truncate">{image.name}</p>
-          ) : null}
 
           {/* Quantity */}
           <div>
@@ -173,9 +262,7 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
             {isLoading ? STATUS_LABELS[status as LoadingStatus] : 'Generate'}
           </button>
 
-          {errorMsg ? (
-            <p className="text-xs text-red-400">{errorMsg}</p>
-          ) : null}
+          {errorMsg ? <p className="text-xs text-red-400">{errorMsg}</p> : null}
         </div>
 
         {/* Right — prompt preview */}
@@ -187,38 +274,38 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
       {/* Results grid */}
       {(results.length > 0 || isLoading) ? (
         <div className="mt-8">
-        {results.length > 0 && !isLoading ? (
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-xs text-neutral-500">{results.length} image{results.length !== 1 ? 's' : ''} generated</p>
-            <button
-              type="button"
-              onClick={() => { setResults([]); localStorage.removeItem('gen-results') }}
-              className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
-            >
-              Clear history
-            </button>
+          {results.length > 0 && !isLoading ? (
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-xs text-neutral-500">{results.length} image{results.length !== 1 ? 's' : ''} generated</p>
+              <button
+                type="button"
+                onClick={() => { setResults([]); localStorage.removeItem('gen-results') }}
+                className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+              >
+                Clear history
+              </button>
+            </div>
+          ) : null}
+          <div className={`grid gap-4 ${quantity === 1 ? 'grid-cols-1' : quantity === 2 ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
+            {isLoading
+              ? Array.from({ length: quantity }).map((_, i) => (
+                  <div key={i} className="aspect-video rounded-lg bg-neutral-800 animate-pulse" />
+                ))
+              : results.map((url, i) => (
+                  <div key={i} className="relative group rounded-lg overflow-hidden">
+                    <img src={url} alt={`Generated result ${i + 1}`} className="w-full aspect-video object-cover" />
+                    <a
+                      href={url}
+                      download={`render-${i + 1}.jpg`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="bg-neutral-900/80 text-white text-xs px-2 py-1 rounded">Download</span>
+                    </a>
+                  </div>
+                ))}
           </div>
-        ) : null}
-        <div className={`grid gap-4 ${quantity === 1 ? 'grid-cols-1' : quantity === 2 ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
-          {isLoading
-            ? Array.from({ length: quantity }).map((_, i) => (
-                <div key={i} className="aspect-video rounded-lg bg-neutral-800 animate-pulse" />
-              ))
-            : results.map((url, i) => (
-                <div key={i} className="relative group rounded-lg overflow-hidden">
-                  <img src={url} alt={`Generated result ${i + 1}`} className="w-full aspect-video object-cover" />
-                  <a
-                    href={url}
-                    download={`render-${i + 1}.jpg`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <span className="bg-neutral-900/80 text-white text-xs px-2 py-1 rounded">Download</span>
-                  </a>
-                </div>
-              ))}
-        </div>
         </div>
       ) : null}
     </div>
