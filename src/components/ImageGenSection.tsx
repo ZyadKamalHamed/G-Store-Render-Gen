@@ -16,6 +16,7 @@ const ASPECT_RATIOS: AspectRatio[] = [
 ]
 
 interface GenerationEntry {
+  id?: string
   url: string
   generatedAt: number
   userEmail?: string
@@ -52,6 +53,7 @@ interface DbGeneration {
 function flattenGenerations(rows: DbGeneration[], showEmail: boolean): GenerationEntry[] {
   return rows.flatMap((row) =>
     row.image_urls.map((url) => ({
+      id: row.id,
       url,
       generatedAt: new Date(row.created_at).getTime(),
       userEmail: showEmail ? row.user_email : undefined,
@@ -80,6 +82,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [compareEntry, setCompareEntry] = useState<GenerationEntry | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0])
   const [mainStrength, setMainStrength] = useState<Strength>('HIGH')
@@ -186,7 +189,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
           clearInterval(pollIntervalRef.current!)
           isGeneratingRef.current = false
           const now = new Date().toISOString()
-          await supabase.from('generations').insert({
+          const { data: inserted } = await supabase.from('generations').insert({
             user_id: user.id,
             user_email: user.email,
             prompt: editedPrompt ?? copyText,
@@ -194,8 +197,9 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
             settings: { width: aspectRatio.width, height: aspectRatio.height, mainStrength, refStrength, quantity },
             created_at: now,
             original_render_url: originalRenderUrl,
-          })
+          }).select('id').single()
           const newEntries = result.images.map((url) => ({
+            id: inserted?.id as string | undefined,
             url,
             generatedAt: new Date(now).getTime(),
             originalRenderUrl: originalRenderUrl ?? undefined,
@@ -547,6 +551,38 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
                           >
                             Compare
                           </button>
+                          {entry.id && !teamFeed ? (
+                            confirmDeleteId === entry.id ? (
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await supabase.from('generations').delete().eq('id', entry.id)
+                                    setResults((prev) => prev.filter((r) => r.id !== entry.id))
+                                    setConfirmDeleteId(null)
+                                  }}
+                                  className="text-xs bg-red-700 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="text-xs bg-neutral-700 hover:bg-neutral-600 text-white px-2 py-1 rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteId(entry.id!)}
+                                className="text-xs bg-red-900/60 hover:bg-red-800 text-red-300 px-2 py-1 rounded transition-colors"
+                              >
+                                Delete
+                              </button>
+                            )
+                          ) : null}
                         </div>
                       </div>
                     </div>
