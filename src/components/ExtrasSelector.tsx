@@ -8,7 +8,7 @@ interface ExtrasSelectorProps {
 import { activeClass } from '../utils/activeClass'
 
 const pillClass = (active: boolean) =>
-  `px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 ${activeClass(active)}`
+  `px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 cursor-pointer ${activeClass(active)}`
 
 export default function ExtrasSelector({ plants, lights, lightsColour, onChange }: ExtrasSelectorProps) {
   return (
@@ -39,7 +39,7 @@ export default function ExtrasSelector({ plants, lights, lightsColour, onChange 
                 key={c}
                 type="button"
                 onClick={() => onChange(plants, lights, c)}
-                className={`px-3 py-1.5 rounded text-xs font-medium capitalize transition-all duration-150 ${
+                className={`px-3 py-1.5 rounded text-xs font-medium capitalize transition-all duration-150 cursor-pointer ${
                   lightsColour === c
                     ? 'bg-white text-neutral-900'
                     : 'bg-neutral-800 text-neutral-500 border border-neutral-700 hover:border-neutral-500'

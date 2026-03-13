@@ -20,7 +20,8 @@ export default function ToggleSection({ label, description, enabled, onToggle, c
         <button
           type="button"
           onClick={onToggle}
-          className={`w-14 h-8 rounded-md text-xs font-semibold transition-all duration-150 shrink-0 ${activeClass(enabled)}`}
+          aria-pressed={enabled}
+          className={`w-14 h-8 rounded-md text-xs font-semibold transition-all duration-150 shrink-0 cursor-pointer ${activeClass(enabled)}`}
         >
           {enabled ? 'Yes' : 'No'}
         </button>

@@ -8,7 +8,7 @@ interface PromptPreviewProps {
 export default function PromptPreview({ assembled, copyText }: PromptPreviewProps) {
   const [editMode, setEditMode] = useState(false)
   const [editedText, setEditedText] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<false | 'ok' | 'fail'>(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -30,12 +30,12 @@ export default function PromptPreview({ assembled, copyText }: PromptPreviewProp
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(copyText)
-      setCopied(true)
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
+      setCopied('ok')
     } catch {
-      // clipboard API unavailable or permission denied — silently ignore
+      setCopied('fail')
     }
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -49,7 +49,7 @@ export default function PromptPreview({ assembled, copyText }: PromptPreviewProp
             <button
               type="button"
               onClick={() => setEditedText(assembled)}
-              className="text-xs text-neutral-500 hover:text-white transition-colors"
+              className="text-xs text-neutral-500 hover:text-white transition-colors cursor-pointer"
             >
               Reset
             </button>
@@ -58,16 +58,16 @@ export default function PromptPreview({ assembled, copyText }: PromptPreviewProp
             type="button"
             onClick={handleEditToggle}
             title={editMode ? 'Done editing' : 'Edit prompt'}
-            className="text-xs text-neutral-400 hover:text-white transition-colors px-2 py-1 rounded border border-neutral-700 hover:border-neutral-500"
+            className="text-xs text-neutral-400 hover:text-white transition-colors px-2 py-1 rounded border border-neutral-700 hover:border-neutral-500 cursor-pointer focus:ring-2 focus:ring-white/20 focus:outline-none"
           >
             {editMode ? '✓' : '✎'}
           </button>
           <button
             type="button"
             onClick={handleCopy}
-            className="text-xs text-neutral-400 hover:text-white transition-colors px-3 py-1 rounded border border-neutral-700 hover:border-neutral-500"
+            className="text-xs text-neutral-400 hover:text-white transition-colors px-3 py-1 rounded border border-neutral-700 hover:border-neutral-500 cursor-pointer focus:ring-2 focus:ring-white/20 focus:outline-none"
           >
-            {copied ? 'Copied!' : 'Copy'}
+            {copied === 'ok' ? 'Copied!' : copied === 'fail' ? 'Copy failed' : 'Copy'}
           </button>
         </div>
       </div>

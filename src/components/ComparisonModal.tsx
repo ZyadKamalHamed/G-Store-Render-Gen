@@ -99,6 +99,12 @@ export default function ComparisonModal({ generatedUrl, originalPreview, onClose
         {/* Divider */}
         {originalPreview ? (
           <div
+            role="slider"
+            aria-valuenow={Math.round(splitPct)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Comparison split position"
+            tabIndex={0}
             className="absolute inset-y-0 z-10 flex items-center justify-center cursor-col-resize"
             style={{ left: `${splitPct}%`, transform: 'translateX(-50%)' }}
             onMouseDown={() => { dragging.current = true }}
@@ -117,7 +123,7 @@ export default function ComparisonModal({ generatedUrl, originalPreview, onClose
         <button
           type="button"
           onClick={onClose}
-          className="absolute bottom-3 right-3 z-20 text-xs bg-black/60 hover:bg-black/80 text-neutral-300 px-3 py-1.5 rounded transition-colors"
+          className="absolute bottom-3 right-3 z-20 text-xs bg-black/60 hover:bg-black/80 text-neutral-300 px-3 py-1.5 rounded transition-colors cursor-pointer"
         >
           Close
         </button>

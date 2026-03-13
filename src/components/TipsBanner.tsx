@@ -22,7 +22,8 @@ export default function TipsBanner() {
       <button
         type="button"
         onClick={toggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-neutral-300 hover:text-white transition-colors"
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-neutral-300 hover:text-white transition-colors cursor-pointer"
       >
         <span className="flex items-center gap-2">
           <span>💡</span>

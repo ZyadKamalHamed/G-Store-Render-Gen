@@ -8,6 +8,7 @@ interface ProfileMenuProps {
 
 export default function ProfileMenu({ user }: ProfileMenuProps) {
   const [open, setOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const initial = (user.email ?? '?')[0].toUpperCase()
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined
@@ -20,28 +21,34 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  async function handleSignOut() {
+    setSigningOut(true)
+    await supabase.auth.signOut()
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-neutral-700 hover:bg-neutral-600 transition-colors text-sm font-semibold text-white shrink-0"
+        className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-neutral-700 hover:bg-neutral-600 transition-colors text-sm font-semibold text-white shrink-0 cursor-pointer focus:ring-2 focus:ring-white/20 focus:outline-none"
       >
         {avatarUrl ? (
-          <img src={avatarUrl} alt={initial} className="w-full h-full object-cover" />
+          <img src={avatarUrl} alt={`${user.email} profile`} className="w-full h-full object-cover" />
         ) : (
           initial
         )}
       </button>
       {open ? (
-        <div className="absolute right-0 mt-2 w-52 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl z-50 p-3 flex flex-col gap-3">
+        <div className="absolute right-0 mt-2 w-52 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl z-50 p-3 flex flex-col gap-3 animate-fade-in">
           <p className="text-xs text-neutral-400 truncate">{user.email}</p>
           <button
             type="button"
-            onClick={() => supabase.auth.signOut()}
-            className="text-xs text-neutral-400 hover:text-white text-left transition-colors"
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="text-xs text-neutral-400 hover:text-white text-left transition-colors cursor-pointer disabled:opacity-50"
           >
-            Sign out
+            {signingOut ? 'Signing out...' : 'Sign out'}
           </button>
         </div>
       ) : null}

@@ -1,12 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const DATABASE_ID = '3216bc76a11e8038ae17f2117d44bf3e'
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
 
   const notionKey = process.env.NOTION_API_KEY
   if (!notionKey) return res.status(500).json({ error: 'NOTION_API_KEY not set' })
+
+  const DATABASE_ID = process.env.NOTION_DATABASE_ID
+  if (!DATABASE_ID) return res.status(500).json({ error: 'NOTION_DATABASE_ID not set' })
 
   const { suggestion } = req.body as { suggestion: string }
   if (!suggestion?.trim()) return res.status(400).json({ error: 'suggestion is required' })

@@ -42,7 +42,7 @@ export default function SuggestionBox() {
             onChange={(e) => { setText(e.target.value); if (status !== 'idle') setStatus('idle') }}
             placeholder="Your suggestion..."
             rows={3}
-            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-3 text-sm text-white resize-none focus:outline-none focus:border-neutral-500 leading-relaxed"
+            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-3 text-sm text-white resize-none focus:outline-none focus:border-neutral-500 focus:ring-2 focus:ring-white/10 leading-relaxed"
           />
           <div className="flex items-center justify-between gap-4">
             {status === 'sent' ? (
@@ -53,7 +53,7 @@ export default function SuggestionBox() {
             <button
               type="submit"
               disabled={!text.trim() || status === 'sending'}
-              className="px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed bg-white text-neutral-900 hover:bg-neutral-100"
+              className="px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed bg-white text-neutral-900 hover:bg-neutral-100 cursor-pointer"
             >
               {status === 'sending' ? 'Sending...' : 'Send'}
             </button>
