@@ -170,7 +170,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
     copyTimeoutRef.current = setTimeout(() => setCopiedUrl(null), 1500)
   }
 
-  function startPolling(generationId: string, originalRenderUrl: string | null) {
+  function startPolling(generationId: string, originalImageB64: string, originalImageExt: string, originalImageMime: string) {
     setStatus('polling')
     let attempts = 0
     const MAX_ATTEMPTS = 40 // 40 * 3s = 2 minutes
@@ -199,15 +199,19 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
               image_urls: result.images,
               settings: { width: aspectRatio.width, height: aspectRatio.height, mainStrength, refStrength, quantity },
               created_at: now,
-              original_render_url: originalRenderUrl,
+              original_image_b64: originalImageB64,
+              original_image_ext: originalImageExt,
+              original_image_mime: originalImageMime,
             }),
           })
-          const dbId: string | undefined = saveRes.ok ? (await saveRes.json()).id : undefined
+          const saveData = saveRes.ok ? await saveRes.json() : {}
+          const dbId: string | undefined = saveData.id
+          const savedOriginalUrl: string | undefined = saveData.original_render_url
           const newEntries = result.images.map((url) => ({
             id: dbId,
             url,
             generatedAt: new Date(now).getTime(),
-            originalRenderUrl: originalRenderUrl ?? undefined,
+            originalRenderUrl: savedOriginalUrl,
           }))
           setResults((prev) => [...newEntries, ...prev])
           setStatus('done')
@@ -236,7 +240,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
     try {
       setStatus('uploading')
       const allFiles = [image, ...refImages.map((r) => r.file)]
-      const [ids, originalRenderUrl] = await Promise.all([
+      const [ids, originalImageB64] = await Promise.all([
         Promise.all(
           allFiles.map((file) =>
             uploadRender(file).then((id) => {
@@ -245,13 +249,11 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
             })
           )
         ),
-        (async (): Promise<string | null> => {
-          const ext = image.name.split('.').pop() ?? 'jpg'
-          const path = `${user.id}/${Date.now()}.${ext}`
-          const { error } = await supabase.storage.from('originals').upload(path, image, { contentType: image.type })
-          if (error) return null
-          return supabase.storage.from('originals').getPublicUrl(path).data.publicUrl
-        })(),
+        new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.readAsDataURL(image)
+        }),
       ])
       const [mainImageId, ...refImageIds] = ids
       setUploadProgress(null)
@@ -264,7 +266,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
       }
       setStatus('generating')
       const generationId = await generate(mainImageId, refImageIds, editedPrompt ?? copyText, quantity, settings)
-      startPolling(generationId, originalRenderUrl)
+      startPolling(generationId, originalImageB64, image.name.split('.').pop() ?? 'jpg', image.type)
     } catch (err) {
       setUploadProgress(null)
       isGeneratingRef.current = false
