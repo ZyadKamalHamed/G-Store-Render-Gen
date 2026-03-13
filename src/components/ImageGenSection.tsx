@@ -189,17 +189,22 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
           clearInterval(pollIntervalRef.current!)
           isGeneratingRef.current = false
           const now = new Date().toISOString()
-          const { data: inserted } = await supabase.from('generations').insert({
-            user_id: user.id,
-            user_email: user.email,
-            prompt: editedPrompt ?? copyText,
-            image_urls: result.images,
-            settings: { width: aspectRatio.width, height: aspectRatio.height, mainStrength, refStrength, quantity },
-            created_at: now,
-            original_render_url: originalRenderUrl,
-          }).select('id').single()
+          const saveRes = await fetch('/api/save-generation', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.id,
+              user_email: user.email,
+              prompt: editedPrompt ?? copyText,
+              image_urls: result.images,
+              settings: { width: aspectRatio.width, height: aspectRatio.height, mainStrength, refStrength, quantity },
+              created_at: now,
+              original_render_url: originalRenderUrl,
+            }),
+          })
+          const dbId: string | undefined = saveRes.ok ? (await saveRes.json()).id : undefined
           const newEntries = result.images.map((url) => ({
-            id: inserted?.id as string | undefined,
+            id: dbId,
             url,
             generatedAt: new Date(now).getTime(),
             originalRenderUrl: originalRenderUrl ?? undefined,
