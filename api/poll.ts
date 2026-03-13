@@ -44,12 +44,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!imageRes.ok) return img
         const buffer = await imageRes.arrayBuffer()
         const path = `${id}/${i}.jpg`
-        const { error: uploadError } = await supabase.storage.from('renders').upload(path, buffer, {
+        const { error: uploadError } = await supabase.storage.from('Renders').upload(path, buffer, {
           contentType: 'image/jpeg',
           upsert: true,
         })
         if (uploadError) return img
-        const { data: urlData } = supabase.storage.from('renders').getPublicUrl(path)
+        const { data: urlData } = supabase.storage.from('Renders').getPublicUrl(path)
         return { ...img, url: urlData.publicUrl }
       } catch {
         return img // fall back to Leonardo URL if re-hosting fails

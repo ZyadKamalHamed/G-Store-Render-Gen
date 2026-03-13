@@ -34,10 +34,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const buffer = Buffer.from(original_image_b64, 'base64')
     const path = `${user_id}/${Date.now()}.${original_image_ext}`
     const { error: uploadErr } = await supabase.storage
-      .from('originals')
+      .from('Originals')
       .upload(path, buffer, { contentType: original_image_mime, upsert: true })
     if (!uploadErr) {
-      original_render_url = supabase.storage.from('originals').getPublicUrl(path).data.publicUrl
+      original_render_url = supabase.storage.from('Originals').getPublicUrl(path).data.publicUrl
     }
   }
 
