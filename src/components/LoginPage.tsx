@@ -6,7 +6,7 @@ export default function LoginPage() {
       provider: 'google',
       options: {
         queryParams: { hd: 'thegstore.com.au' },
-        redirectTo: window.location.origin,
+        redirectTo: 'https://g-store-render-gen.vercel.app',
       },
     })
   }
