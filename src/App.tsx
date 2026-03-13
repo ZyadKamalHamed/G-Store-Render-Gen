@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import type { User } from '@supabase/supabase-js'
 import TipsBanner from './components/TipsBanner'
 import ToggleSection from './components/ToggleSection'
 import ExtrasSelector from './components/ExtrasSelector'
 import PromptPreview from './components/PromptPreview'
 import ImageGenSection from './components/ImageGenSection'
 import SuggestionBox from './components/SuggestionBox'
+import AuthGuard from './components/AuthGuard'
 import { stripHeadings } from './utils/stripHeadings'
+import { supabase } from './lib/supabase'
 
 interface ProductPlacement {
   enabled: boolean
@@ -106,7 +109,7 @@ function assemblePrompt(
   return sections.join('\n\n')
 }
 
-export default function App() {
+function AppInner({ user }: { user: User }) {
   const [pp, setPp] = useState<ProductPlacement>({
     enabled: false,
     product: 'clear boxes',
@@ -150,11 +153,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Render Prompt Generator</h1>
-          <p className="text-neutral-400 text-sm mt-1">
-            Fill in the brief on the left — your prompt builds live on the right.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Render Prompt Generator</h1>
+            <p className="text-neutral-400 text-sm mt-1">
+              Fill in the brief on the left — your prompt builds live on the right.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0 pt-1">
+            <span className="text-xs text-neutral-500">{user.email}</span>
+            <button
+              type="button"
+              onClick={() => supabase.auth.signOut()}
+              className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
 
         <TipsBanner />
@@ -254,9 +269,13 @@ export default function App() {
           </div>
         </div>
 
-        <ImageGenSection copyText={copyText} />
+        <ImageGenSection copyText={copyText} user={user} />
         <SuggestionBox />
       </div>
     </div>
   )
+}
+
+export default function App() {
+  return <AuthGuard>{(user) => <AppInner user={user} />}</AuthGuard>
 }

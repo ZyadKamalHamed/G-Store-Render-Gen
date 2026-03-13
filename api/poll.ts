@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).end()
@@ -16,6 +17,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     },
   })
 
+  if (!upstream.ok) {
+    const errData = await upstream.json().catch(() => null)
+    const msg = errData?.error?.message ?? errData?.detail ?? errData?.message ?? `Poll failed (${upstream.status})`
+    return res.status(upstream.status).json({ error: msg })
+  }
+
   const data = await upstream.json()
-  res.status(upstream.status).json(data)
+  const gen = data.generations_by_pk
+
+  // Only re-host when complete and Supabase is configured
+  if (
+    gen.status !== 'COMPLETE' ||
+    !process.env.SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_KEY
+  ) {
+    return res.status(200).json(data)
+  }
+
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+
+  const rehostedImages = await Promise.all(
+    (gen.generated_images ?? []).map(async (img: { url: string }, i: number) => {
+      try {
+        const imageRes = await fetch(img.url)
+        if (!imageRes.ok) return img
+        const buffer = await imageRes.arrayBuffer()
+        const path = `${id}/${i}.jpg`
+        await supabase.storage.from('renders').upload(path, buffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        })
+        const { data: urlData } = supabase.storage.from('renders').getPublicUrl(path)
+        return { ...img, url: urlData.publicUrl }
+      } catch {
+        return img // fall back to Leonardo URL if re-hosting fails
+      }
+    })
+  )
+
+  return res.status(200).json({
+    ...data,
+    generations_by_pk: { ...gen, generated_images: rehostedImages },
+  })
 }

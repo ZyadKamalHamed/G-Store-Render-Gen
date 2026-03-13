@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import type { User } from '@supabase/supabase-js'
 import { uploadRender, generate, pollGeneration, type GenerateSettings } from '../leonardo'
 import { activeClass } from '../utils/activeClass'
 import ComparisonModal from './ComparisonModal'
+import { supabase } from '../lib/supabase'
 
 type Status = 'idle' | 'uploading' | 'generating' | 'polling' | 'done' | 'error'
 type Strength = 'LOW' | 'MID' | 'HIGH'
@@ -16,6 +18,7 @@ const ASPECT_RATIOS: AspectRatio[] = [
 interface GenerationEntry {
   url: string
   generatedAt: number
+  userEmail?: string
 }
 
 interface RefImage {
@@ -24,7 +27,6 @@ interface RefImage {
 }
 
 const MAX_REFS = 8
-const EXPIRY_MS = 24 * 60 * 60 * 1000
 
 function timeAgo(ts: number): string {
   if (ts === 0) return 'unknown age'
@@ -35,29 +37,40 @@ function timeAgo(ts: number): string {
   return `${Math.floor(diff / 86_400_000)}d ago`
 }
 
-function loadResults(): GenerationEntry[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem('gen-results') ?? '[]')
-    const entries = raw.map((item: string | GenerationEntry) =>
-      typeof item === 'string' ? { url: item, generatedAt: 0 } : item
-    )
-    const fresh = entries.filter((e: GenerationEntry) => e.generatedAt === 0 || Date.now() - e.generatedAt < EXPIRY_MS)
-    if (fresh.length !== entries.length) localStorage.setItem('gen-results', JSON.stringify(fresh))
-    return fresh
-  } catch { return [] }
+interface DbGeneration {
+  id: string
+  user_id: string
+  user_email: string
+  prompt: string
+  image_urls: string[]
+  settings: Record<string, unknown>
+  created_at: string
+}
+
+function flattenGenerations(rows: DbGeneration[], showEmail: boolean): GenerationEntry[] {
+  return rows.flatMap((row) =>
+    row.image_urls.map((url) => ({
+      url,
+      generatedAt: new Date(row.created_at).getTime(),
+      userEmail: showEmail ? row.user_email : undefined,
+    }))
+  )
 }
 
 interface ImageGenSectionProps {
   copyText: string
+  user: User
 }
 
-export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
+export default function ImageGenSection({ copyText, user }: ImageGenSectionProps) {
   const [image, setImage] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [refImages, setRefImages] = useState<RefImage[]>([])
   const [quantity, setQuantity] = useState<1 | 2 | 3 | 4>(1)
   const [status, setStatus] = useState<Status>('idle')
-  const [results, setResults] = useState<GenerationEntry[]>(loadResults)
+  const [results, setResults] = useState<GenerationEntry[]>([])
+  const [teamFeed, setTeamFeed] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [editedPrompt, setEditedPrompt] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -81,6 +94,22 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    async function loadHistory() {
+      setHistoryLoading(true)
+      let query = supabase
+        .from('generations')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (!teamFeed) query = query.eq('user_id', user.id)
+      const { data } = await query
+      setResults(data ? flattenGenerations(data as DbGeneration[], teamFeed) : [])
+      setHistoryLoading(false)
+    }
+    loadHistory()
+  }, [teamFeed, user.id])
 
   useEffect(() => {
     return () => { if (preview) URL.revokeObjectURL(preview) }
@@ -153,12 +182,20 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
         if (result.status === 'COMPLETE') {
           clearInterval(pollIntervalRef.current!)
           isGeneratingRef.current = false
-          const now = Date.now()
-          setResults((prev) => {
-            const updated = [...result.images.map((url) => ({ url, generatedAt: now })), ...prev]
-            localStorage.setItem('gen-results', JSON.stringify(updated))
-            return updated
+          const now = new Date().toISOString()
+          await supabase.from('generations').insert({
+            user_id: user.id,
+            user_email: user.email,
+            prompt: editedPrompt ?? copyText,
+            image_urls: result.images,
+            settings: { width: aspectRatio.width, height: aspectRatio.height, mainStrength, refStrength, quantity },
+            created_at: now,
           })
+          const newEntries = result.images.map((url) => ({
+            url,
+            generatedAt: new Date(now).getTime(),
+          }))
+          setResults((prev) => [...newEntries, ...prev])
           setStatus('done')
         } else if (result.status === 'FAILED') {
           clearInterval(pollIntervalRef.current!)
@@ -422,27 +459,44 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
       </div>
 
       {/* Results grid */}
-      {(results.length > 0 || isLoading) ? (
-        <div className="mt-8">
-          {results.length > 0 && !isLoading ? (
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-xs text-neutral-500">{results.length} image{results.length !== 1 ? 's' : ''} generated</p>
-              <button
-                type="button"
-                onClick={() => { setResults([]); localStorage.removeItem('gen-results') }}
-                className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
-              >
-                Clear history
-              </button>
-            </div>
+      <div className="mt-8">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-lg p-0.5">
+            <button
+              type="button"
+              onClick={() => setTeamFeed(false)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${!teamFeed ? 'bg-white text-neutral-900' : 'text-neutral-400 hover:text-neutral-200'}`}
+            >
+              My renders
+            </button>
+            <button
+              type="button"
+              onClick={() => setTeamFeed(true)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${teamFeed ? 'bg-white text-neutral-900' : 'text-neutral-400 hover:text-neutral-200'}`}
+            >
+              Team feed
+            </button>
+          </div>
+          {!teamFeed && results.length > 0 && !isLoading ? (
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.from('generations').delete().eq('user_id', user.id)
+                setResults([])
+              }}
+              className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+            >
+              Clear my history
+            </button>
           ) : null}
+        </div>
+        {(results.length > 0 || isLoading || historyLoading) ? (
           <div className={`grid gap-4 ${quantity === 1 ? 'grid-cols-1' : quantity === 2 ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
-            {isLoading
+            {isLoading || historyLoading
               ? Array.from({ length: quantity }).map((_, i) => (
                   <div key={i} className="aspect-video rounded-lg bg-neutral-800 animate-pulse" />
                 ))
               : results.map((entry, i) => {
-                  const expired = entry.generatedAt > 0 && Date.now() - entry.generatedAt > EXPIRY_MS
                   return (
                     <div key={i} className="relative group rounded-lg overflow-hidden bg-neutral-900">
                       <img
@@ -452,11 +506,10 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
                         onClick={() => setCompareEntry(entry)}
                       />
                       <div className="absolute bottom-0 inset-x-0 flex items-center justify-between px-2 py-1.5 bg-neutral-900/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-xs text-neutral-500">{timeAgo(entry.generatedAt)}</span>
+                        <span className="text-xs text-neutral-500">
+                          {entry.userEmail ? `${entry.userEmail.split('@')[0]} · ` : ''}{timeAgo(entry.generatedAt)}
+                        </span>
                         <div className="flex gap-1.5 items-center">
-                          {expired ? (
-                            <span className="text-xs text-amber-500">Expired</span>
-                          ) : null}
                           <button
                             type="button"
                             onClick={() => copyToClipboard(entry.url)}
@@ -486,8 +539,12 @@ export default function ImageGenSection({ copyText }: ImageGenSectionProps) {
                   )
                 })}
           </div>
-        </div>
-      ) : null}
+        ) : (
+          <p className="text-xs text-neutral-600 text-center py-8">
+            {teamFeed ? 'No team renders yet.' : 'No renders yet. Generate one above.'}
+          </p>
+        )}
+      </div>
 
       {compareEntry ? (
         <ComparisonModal
