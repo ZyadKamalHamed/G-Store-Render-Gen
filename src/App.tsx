@@ -7,8 +7,8 @@ import PromptPreview from './components/PromptPreview'
 import ImageGenSection from './components/ImageGenSection'
 import SuggestionBox from './components/SuggestionBox'
 import AuthGuard from './components/AuthGuard'
+import ProfileMenu from './components/ProfileMenu'
 import { stripHeadings } from './utils/stripHeadings'
-import { supabase } from './lib/supabase'
 
 interface ProductPlacement {
   enabled: boolean
@@ -160,15 +160,8 @@ function AppInner({ user }: { user: User }) {
               Fill in the brief on the left — your prompt builds live on the right.
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0 pt-1">
-            <span className="text-xs text-neutral-500">{user.email}</span>
-            <button
-              type="button"
-              onClick={() => supabase.auth.signOut()}
-              className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
-            >
-              Sign out
-            </button>
+          <div className="shrink-0 pt-1">
+            <ProfileMenu user={user} />
           </div>
         </div>
 

@@ -19,6 +19,7 @@ interface GenerationEntry {
   url: string
   generatedAt: number
   userEmail?: string
+  originalRenderUrl?: string
 }
 
 interface RefImage {
@@ -45,6 +46,7 @@ interface DbGeneration {
   image_urls: string[]
   settings: Record<string, unknown>
   created_at: string
+  original_render_url?: string
 }
 
 function flattenGenerations(rows: DbGeneration[], showEmail: boolean): GenerationEntry[] {
@@ -53,6 +55,7 @@ function flattenGenerations(rows: DbGeneration[], showEmail: boolean): Generatio
       url,
       generatedAt: new Date(row.created_at).getTime(),
       userEmail: showEmail ? row.user_email : undefined,
+      originalRenderUrl: row.original_render_url ?? undefined,
     }))
   )
 }
@@ -164,7 +167,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
     copyTimeoutRef.current = setTimeout(() => setCopiedUrl(null), 1500)
   }
 
-  function startPolling(generationId: string) {
+  function startPolling(generationId: string, originalRenderUrl: string | null) {
     setStatus('polling')
     let attempts = 0
     const MAX_ATTEMPTS = 40 // 40 * 3s = 2 minutes
@@ -190,10 +193,12 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
             image_urls: result.images,
             settings: { width: aspectRatio.width, height: aspectRatio.height, mainStrength, refStrength, quantity },
             created_at: now,
+            original_render_url: originalRenderUrl,
           })
           const newEntries = result.images.map((url) => ({
             url,
             generatedAt: new Date(now).getTime(),
+            originalRenderUrl: originalRenderUrl ?? undefined,
           }))
           setResults((prev) => [...newEntries, ...prev])
           setStatus('done')
@@ -222,14 +227,23 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
     try {
       setStatus('uploading')
       const allFiles = [image, ...refImages.map((r) => r.file)]
-      const ids = await Promise.all(
-        allFiles.map((file) =>
-          uploadRender(file).then((id) => {
-            setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null)
-            return id
-          })
-        )
-      )
+      const [ids, originalRenderUrl] = await Promise.all([
+        Promise.all(
+          allFiles.map((file) =>
+            uploadRender(file).then((id) => {
+              setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null)
+              return id
+            })
+          )
+        ),
+        (async (): Promise<string | null> => {
+          const ext = image.name.split('.').pop() ?? 'jpg'
+          const path = `${user.id}/${Date.now()}.${ext}`
+          const { error } = await supabase.storage.from('originals').upload(path, image, { contentType: image.type })
+          if (error) return null
+          return supabase.storage.from('originals').getPublicUrl(path).data.publicUrl
+        })(),
+      ])
       const [mainImageId, ...refImageIds] = ids
       setUploadProgress(null)
 
@@ -241,7 +255,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
       }
       setStatus('generating')
       const generationId = await generate(mainImageId, refImageIds, editedPrompt ?? copyText, quantity, settings)
-      startPolling(generationId)
+      startPolling(generationId, originalRenderUrl)
     } catch (err) {
       setUploadProgress(null)
       isGeneratingRef.current = false
@@ -549,7 +563,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
       {compareEntry ? (
         <ComparisonModal
           generatedUrl={compareEntry.url}
-          originalPreview={preview}
+          originalPreview={compareEntry.originalRenderUrl ?? preview}
           onClose={() => setCompareEntry(null)}
         />
       ) : null}
