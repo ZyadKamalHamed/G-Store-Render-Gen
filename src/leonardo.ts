@@ -4,8 +4,6 @@
 // Model ID — update this when switching between Nano Banana 2 and Nano Banana Pro
 const MODEL_ID = 'gemini-image-2'
 
-const WIDTH = 1584
-const HEIGHT = 672
 const STYLE_ID = '111dc692-d470-4eec-b791-3475abac4c46'
 
 // Steps 1+2: Init image + S3 upload (combined server-side to avoid S3 CORS)
@@ -54,7 +52,7 @@ export async function generate(
   quantity: number,
   settings: GenerateSettings = {},
 ): Promise<string> {
-  const { width = WIDTH, height = HEIGHT, mainStrength = 'HIGH', refStrength = 'LOW' } = settings
+  const { width = 1584, height = 672, mainStrength = 'HIGH', refStrength = 'LOW' } = settings
   const imageReferences = [
     { image: { id: mainImageId, type: 'UPLOADED' }, strength: mainStrength },
     ...refImageIds.map((id) => ({ image: { id, type: 'UPLOADED' }, strength: refStrength })),

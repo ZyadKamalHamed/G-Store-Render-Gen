@@ -91,7 +91,7 @@ export default function ComparisonModal({ generatedUrl, originalPreview, onClose
           <img
             src={originalPreview}
             alt="Original render"
-            className="absolute inset-0 w-full h-full object-contain"
+            className="absolute inset-0 w-full h-full object-cover"
             style={{ clipPath: `inset(0 ${100 - splitPct}% 0 0)` }}
           />
         ) : null}

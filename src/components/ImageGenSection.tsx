@@ -10,10 +10,20 @@ type Strength = 'LOW' | 'MID' | 'HIGH'
 
 interface AspectRatio { label: string; width: number; height: number }
 const ASPECT_RATIOS: AspectRatio[] = [
-  { label: 'Ultra-wide', width: 1584, height: 672 },
-  { label: 'Square', width: 1024, height: 1024 },
-  { label: 'Portrait', width: 768, height: 1024 },
+  { label: '21:9', width: 1584, height: 672 },
+  { label: '16:9', width: 1376, height: 768 },
+  { label: '3:2',  width: 1216, height: 816 },
+  { label: '4:3',  width: 1152, height: 864 },
+  { label: '5:4',  width: 1120, height: 896 },
+  { label: '1:1',  width: 1024, height: 1024 },
+  { label: '4:5',  width: 896,  height: 1120 },
+  { label: '3:4',  width: 864,  height: 1152 },
+  { label: '2:3',  width: 816,  height: 1216 },
+  { label: '9:16', width: 768,  height: 1376 },
 ]
+
+type QualityTier = 'small' | 'medium' | 'large'
+const QUALITY_MULTIPLIERS: Record<QualityTier, number> = { small: 1, medium: 2, large: 4 }
 
 interface GenerationEntry {
   id?: string
@@ -88,6 +98,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0])
   const [mainStrength, setMainStrength] = useState<Strength>('HIGH')
   const [refStrength, setRefStrength] = useState<Strength>('LOW')
+  const [quality, setQuality] = useState<QualityTier>('small')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const refInputRef = useRef<HTMLInputElement>(null)
@@ -198,7 +209,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
               user_email: user.email,
               prompt: editedPrompt ?? copyText,
               image_urls: result.images,
-              settings: { width: aspectRatio.width, height: aspectRatio.height, mainStrength, refStrength, quantity },
+              settings: { width: aspectRatio.width * QUALITY_MULTIPLIERS[quality], height: aspectRatio.height * QUALITY_MULTIPLIERS[quality], mainStrength, refStrength, quantity, quality },
               created_at: now,
               original_image_b64: originalImageB64,
               original_image_ext: originalImageExt,
@@ -259,9 +270,10 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
       const [mainImageId, ...refImageIds] = ids
       setUploadProgress(null)
 
+      const mult = QUALITY_MULTIPLIERS[quality]
       const settings: GenerateSettings = {
-        width: aspectRatio.width,
-        height: aspectRatio.height,
+        width: aspectRatio.width * mult,
+        height: aspectRatio.height * mult,
         mainStrength,
         refStrength,
       }
@@ -393,20 +405,41 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
             )}
           </div>
 
-          {/* Quantity */}
-          <div>
-            <p className="text-sm font-medium text-neutral-200 mb-2">Quantity</p>
-            <div className="flex gap-2">
-              {([1, 2, 3, 4] as const).map((n) => (
+          {/* Quantity + Quality */}
+          <div className="flex gap-6">
+            <div>
+              <p className="text-sm font-medium text-neutral-200 mb-2">Quantity</p>
+              <div className="flex gap-2">
+                {([1, 2, 3, 4] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setQuantity(n)}
+                    className={`w-10 h-10 rounded-md text-sm font-semibold transition-all duration-150 cursor-pointer ${activeClass(quantity === n)}`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-neutral-200 mb-2">Quality</p>
+              <div className="flex gap-2">
                 <button
-                  key={n}
                   type="button"
-                  onClick={() => setQuantity(n)}
-                  className={`w-10 h-10 rounded-md text-sm font-semibold transition-all duration-150 cursor-pointer ${activeClass(quantity === n)}`}
+                  onClick={() => setQuality('small')}
+                  className={`px-4 h-10 rounded-md text-sm font-semibold transition-all duration-150 cursor-pointer ${activeClass(quality === 'small')}`}
                 >
-                  {n}
+                  Fast
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setQuality('large')}
+                  className={`px-4 h-10 rounded-md text-sm font-semibold transition-all duration-150 cursor-pointer ${activeClass(quality === 'large')}`}
+                >
+                  Quality
+                </button>
+              </div>
             </div>
           </div>
 
@@ -426,7 +459,7 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
               <div className="px-4 pb-4 flex flex-col gap-4 border-t border-neutral-800 pt-4">
                 <div>
                   <p className="text-xs text-neutral-400 mb-2">Aspect ratio</p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {ASPECT_RATIOS.map((ar) => (
                       <button
                         key={ar.label}
@@ -438,6 +471,24 @@ export default function ImageGenSection({ copyText, user }: ImageGenSectionProps
                       </button>
                     ))}
                   </div>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-400 mb-2">Quality tier</p>
+                  <div className="flex gap-2">
+                    {(['small', 'medium', 'large'] as QualityTier[]).map((tier) => (
+                      <button
+                        key={tier}
+                        type="button"
+                        onClick={() => setQuality(tier)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-all duration-150 cursor-pointer ${activeClass(quality === tier)}`}
+                      >
+                        {tier[0].toUpperCase() + tier.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-neutral-600 mt-1.5">
+                    {aspectRatio.width * QUALITY_MULTIPLIERS[quality]} x {aspectRatio.height * QUALITY_MULTIPLIERS[quality]}px
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-neutral-400 mb-2">Main render influence</p>

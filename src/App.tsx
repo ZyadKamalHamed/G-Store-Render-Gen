@@ -5,10 +5,14 @@ import ToggleSection from './components/ToggleSection'
 import ExtrasSelector from './components/ExtrasSelector'
 import PromptPreview from './components/PromptPreview'
 import ImageGenSection from './components/ImageGenSection'
+import VideoTab from './components/VideoTab'
 import SuggestionBox from './components/SuggestionBox'
 import AuthGuard from './components/AuthGuard'
 import ProfileMenu from './components/ProfileMenu'
 import { stripHeadings } from './utils/stripHeadings'
+import { activeClass } from './utils/activeClass'
+
+type AppTab = 'prompt' | 'image' | 'video'
 
 interface ProductPlacement {
   enabled: boolean
@@ -147,6 +151,8 @@ function AppInner({ user }: { user: User }) {
     lightsColour: 'warm',
   })
 
+  const [activeTab, setActiveTab] = useState<AppTab>('prompt')
+
   const assembled = assemblePrompt(pp, cc, env, mat, lighting, extras)
   const copyText = stripHeadings(assembled)
 
@@ -155,7 +161,7 @@ function AppInner({ user }: { user: User }) {
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Render Prompt Generator</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">G-store Render Box</h1>
             <p className="text-neutral-400 text-sm mt-1">
               Fill in the brief on the left — your prompt builds live on the right.
             </p>
@@ -167,102 +173,128 @@ function AppInner({ user }: { user: User }) {
 
         <TipsBanner />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* Left column — form controls */}
-          <div className="flex flex-col gap-3">
-            <ToggleSection
-              label="Product Placement"
-              description="Does the render contain products that need to be replaced?"
-              enabled={pp.enabled}
-              onToggle={() => setPp((s) => ({ ...s, enabled: !s.enabled }))}
+        {/* Tab bar */}
+        <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-lg p-0.5 w-fit mb-8">
+          {([['prompt', 'Prompt Generator'], ['image', 'Image'], ['video', 'Video']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${activeClass(activeTab === key)}`}
             >
-              <div className="text-sm text-neutral-400 leading-relaxed">
-                Replace all of the{' '}
-                <Field value={pp.product} onChange={(v) => setPp((s) => ({ ...s, product: v }))} placeholder="clear boxes" />
-                {' '}in/on{' '}
-                <Field value={pp.location} onChange={(v) => setPp((s) => ({ ...s, location: v }))} placeholder="the shelves inside the store" />
-                {' '}with{' '}
-                <Field value={pp.replacement} onChange={(v) => setPp((s) => ({ ...s, replacement: v }))} placeholder="packaged duvets, pillows, and blankets" />
-                {' '}similar to reference image{' '}
-                <Field value={pp.refImage} onChange={(v) => setPp((s) => ({ ...s, refImage: v }))} placeholder="3" />.
-              </div>
-            </ToggleSection>
-
-            <ToggleSection
-              label="Colour of Products"
-              description="Does the product require a colour change?"
-              enabled={cc.enabled}
-              onToggle={() => setCc((s) => ({ ...s, enabled: !s.enabled }))}
-            >
-              <div className="text-sm text-neutral-400 leading-relaxed">
-                Apply the colours from the colour palette in{' '}
-                <Field value={cc.paletteRef} onChange={(v) => setCc((s) => ({ ...s, paletteRef: v }))} placeholder="reference image 2" />
-                {' '}to{' '}
-                <Field value={cc.targets} onChange={(v) => setCc((s) => ({ ...s, targets: v }))} placeholder="The white products" />.
-              </div>
-            </ToggleSection>
-
-            <ToggleSection
-              label="Environment"
-              description="Is there blank space in the render you want to fill?"
-              enabled={env.enabled}
-              onToggle={() => setEnv((s) => ({ ...s, enabled: !s.enabled }))}
-            >
-              <div className="text-sm text-neutral-400 leading-relaxed">
-                The white-space{' '}
-                <Field value={env.whiteSpace} onChange={(v) => setEnv((s) => ({ ...s, whiteSpace: v }))} placeholder="around the storefront" />
-                {' '}becomes{' '}
-                <Field value={env.becomes} onChange={(v) => setEnv((s) => ({ ...s, becomes: v }))} placeholder="the interior of a lively, modern shopping mall" />
-                , realistically matching the aesthetic of{' '}
-                <Field value={env.aesthetic} onChange={(v) => setEnv((s) => ({ ...s, aesthetic: v }))} placeholder="the storefront" />.
-              </div>
-            </ToggleSection>
-
-            <ToggleSection
-              label="Textures / Materials"
-              description="Specify surfaces and finishes? (recommended off for first try)"
-              enabled={mat.enabled}
-              onToggle={() => setMat((s) => ({ ...s, enabled: !s.enabled }))}
-            >
-              <div className="text-sm text-neutral-400 leading-relaxed space-y-2">
-                <p>
-                  The roof and walls have{' '}
-                  <Field value={mat.roofWalls} onChange={(v) => setMat((s) => ({ ...s, roofWalls: v }))} placeholder="a textured paint look and feel" />.
-                </p>
-                <p>
-                  The flooring of the interior{' '}
-                  <Field value={mat.flooring} onChange={(v) => setMat((s) => ({ ...s, flooring: v }))} placeholder="is tiled maintaining the pattern shown" />.
-                </p>
-              </div>
-            </ToggleSection>
-
-            {/* Lighting — always included, always editable */}
-            <div className="border border-neutral-800 rounded-lg px-4 py-3">
-              <p className="text-sm font-medium text-neutral-200 mb-2">Lighting</p>
-              <textarea
-                value={lighting}
-                onChange={(e) => setLighting(e.target.value)}
-                rows={3}
-                className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-sm text-white resize-none focus:outline-none focus:border-neutral-500 leading-relaxed"
-              />
-            </div>
-
-            <ExtrasSelector
-              plants={extras.plants}
-              lights={extras.lights}
-              lightsColour={extras.lightsColour}
-              onChange={(plants, lights, lightsColour) => setExtras({ plants, lights, lightsColour })}
-            />
-
-          </div>
-
-          {/* Right column — live prompt preview */}
-          <div className="lg:sticky lg:top-10">
-            <PromptPreview assembled={assembled} copyText={copyText} />
-          </div>
+              {label}
+            </button>
+          ))}
         </div>
 
-        <ImageGenSection copyText={copyText} user={user} />
+        {/* Prompt Generator tab */}
+        {activeTab === 'prompt' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Left column — form controls */}
+            <div className="flex flex-col gap-3">
+              <ToggleSection
+                label="Product Placement"
+                description="Does the render contain products that need to be replaced?"
+                enabled={pp.enabled}
+                onToggle={() => setPp((s) => ({ ...s, enabled: !s.enabled }))}
+              >
+                <div className="text-sm text-neutral-400 leading-relaxed">
+                  Replace all of the{' '}
+                  <Field value={pp.product} onChange={(v) => setPp((s) => ({ ...s, product: v }))} placeholder="clear boxes" />
+                  {' '}in/on{' '}
+                  <Field value={pp.location} onChange={(v) => setPp((s) => ({ ...s, location: v }))} placeholder="the shelves inside the store" />
+                  {' '}with{' '}
+                  <Field value={pp.replacement} onChange={(v) => setPp((s) => ({ ...s, replacement: v }))} placeholder="packaged duvets, pillows, and blankets" />
+                  {' '}similar to reference image{' '}
+                  <Field value={pp.refImage} onChange={(v) => setPp((s) => ({ ...s, refImage: v }))} placeholder="3" />.
+                </div>
+              </ToggleSection>
+
+              <ToggleSection
+                label="Colour of Products"
+                description="Does the product require a colour change?"
+                enabled={cc.enabled}
+                onToggle={() => setCc((s) => ({ ...s, enabled: !s.enabled }))}
+              >
+                <div className="text-sm text-neutral-400 leading-relaxed">
+                  Apply the colours from the colour palette in{' '}
+                  <Field value={cc.paletteRef} onChange={(v) => setCc((s) => ({ ...s, paletteRef: v }))} placeholder="reference image 2" />
+                  {' '}to{' '}
+                  <Field value={cc.targets} onChange={(v) => setCc((s) => ({ ...s, targets: v }))} placeholder="The white products" />.
+                </div>
+              </ToggleSection>
+
+              <ToggleSection
+                label="Environment"
+                description="Is there blank space in the render you want to fill?"
+                enabled={env.enabled}
+                onToggle={() => setEnv((s) => ({ ...s, enabled: !s.enabled }))}
+              >
+                <div className="text-sm text-neutral-400 leading-relaxed">
+                  The white-space{' '}
+                  <Field value={env.whiteSpace} onChange={(v) => setEnv((s) => ({ ...s, whiteSpace: v }))} placeholder="around the storefront" />
+                  {' '}becomes{' '}
+                  <Field value={env.becomes} onChange={(v) => setEnv((s) => ({ ...s, becomes: v }))} placeholder="the interior of a lively, modern shopping mall" />
+                  , realistically matching the aesthetic of{' '}
+                  <Field value={env.aesthetic} onChange={(v) => setEnv((s) => ({ ...s, aesthetic: v }))} placeholder="the storefront" />.
+                </div>
+              </ToggleSection>
+
+              <ToggleSection
+                label="Textures / Materials"
+                description="Specify surfaces and finishes? (recommended off for first try)"
+                enabled={mat.enabled}
+                onToggle={() => setMat((s) => ({ ...s, enabled: !s.enabled }))}
+              >
+                <div className="text-sm text-neutral-400 leading-relaxed space-y-2">
+                  <p>
+                    The roof and walls have{' '}
+                    <Field value={mat.roofWalls} onChange={(v) => setMat((s) => ({ ...s, roofWalls: v }))} placeholder="a textured paint look and feel" />.
+                  </p>
+                  <p>
+                    The flooring of the interior{' '}
+                    <Field value={mat.flooring} onChange={(v) => setMat((s) => ({ ...s, flooring: v }))} placeholder="is tiled maintaining the pattern shown" />.
+                  </p>
+                </div>
+              </ToggleSection>
+
+              {/* Lighting — always included, always editable */}
+              <div className="border border-neutral-800 rounded-lg px-4 py-3">
+                <p className="text-sm font-medium text-neutral-200 mb-2">Lighting</p>
+                <textarea
+                  value={lighting}
+                  onChange={(e) => setLighting(e.target.value)}
+                  rows={3}
+                  className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-sm text-white resize-none focus:outline-none focus:border-neutral-500 leading-relaxed"
+                />
+              </div>
+
+              <ExtrasSelector
+                plants={extras.plants}
+                lights={extras.lights}
+                lightsColour={extras.lightsColour}
+                onChange={(plants, lights, lightsColour) => setExtras({ plants, lights, lightsColour })}
+              />
+
+            </div>
+
+            {/* Right column — live prompt preview */}
+            <div className="lg:sticky lg:top-10">
+              <PromptPreview assembled={assembled} copyText={copyText} />
+            </div>
+          </div>
+        ) : null}
+
+        {/* Image tab */}
+        {activeTab === 'image' ? (
+          <ImageGenSection copyText={copyText} user={user} />
+        ) : null}
+
+        {/* Video tab */}
+        {activeTab === 'video' ? (
+          <VideoTab />
+        ) : null}
+
         <SuggestionBox />
       </div>
     </div>
