@@ -83,6 +83,7 @@ export default function VideoTab({ user }: { user: User }) {
       const { data } = await supabase
         .from('generations')
         .select('image_urls, created_at')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50)
       const images: GalleryImage[] = (data ?? []).flatMap((row: { image_urls: string[] }) =>
