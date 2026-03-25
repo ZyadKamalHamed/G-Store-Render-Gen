@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { User } from '@supabase/supabase-js'
 import TipsBanner from './components/TipsBanner'
 import ToggleSection from './components/ToggleSection'
@@ -152,6 +152,20 @@ function AppInner({ user }: { user: User }) {
   })
 
   const [activeTab, setActiveTab] = useState<AppTab>('prompt')
+  const [apiTokens, setApiTokens] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/credits')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        const details = data?.user_details?.[0]
+        if (details) {
+          const tokens = (details.apiPaidTokens ?? 0) + (details.apiSubscriptionTokens ?? 0)
+          setApiTokens(tokens)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const assembled = assemblePrompt(pp, cc, env, mat, lighting, extras)
   const copyText = stripHeadings(assembled)
@@ -166,7 +180,12 @@ function AppInner({ user }: { user: User }) {
               Fill in the brief on the left — your prompt builds live on the right.
             </p>
           </div>
-          <div className="shrink-0 pt-1">
+          <div className="shrink-0 pt-1 flex items-center gap-3">
+            {apiTokens !== null ? (
+              <span className="text-xs text-neutral-500 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-1">
+                {apiTokens.toLocaleString()} tokens
+              </span>
+            ) : null}
             <ProfileMenu user={user} />
           </div>
         </div>
@@ -292,7 +311,7 @@ function AppInner({ user }: { user: User }) {
 
         {/* Video tab */}
         {activeTab === 'video' ? (
-          <VideoTab />
+          <VideoTab user={user} />
         ) : null}
 
         <SuggestionBox />

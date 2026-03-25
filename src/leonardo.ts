@@ -86,6 +86,50 @@ export async function generate(
   return data.generate.generationId
 }
 
+// Video generation — routes to Veo 3.1 or Kling 3.0 via /api/generate-video
+export async function generateVideo(
+  model: 'VEO3_1' | 'kling-3.0',
+  imageId: string,
+  prompt: string,
+  duration: number,
+  width: number,
+  height: number,
+): Promise<string> {
+  const res = await fetch('/api/generate-video', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ model, imageId, prompt, duration, width, height }),
+  })
+  if (!res.ok) {
+    const errData = await res.json().catch(() => null)
+    const msg = errData?.error?.message ?? errData?.detail ?? errData?.message ?? `Video generate failed (${res.status})`
+    throw new Error(msg)
+  }
+  const data = await res.json()
+  // Veo returns { sdGenerationJob: { generationId } }, Kling returns { generate: { generationId } }
+  return data.sdGenerationJob?.generationId ?? data.generate?.generationId
+}
+
+export interface VideoResult {
+  status: 'PENDING' | 'COMPLETE' | 'FAILED'
+  videos: string[]
+}
+
+export async function pollVideo(generationId: string): Promise<VideoResult> {
+  const res = await fetch(`/api/poll-video?id=${generationId}`)
+  if (!res.ok) {
+    const errData = await res.json().catch(() => null)
+    const msg = errData?.error?.message ?? errData?.detail ?? errData?.message ?? `Poll failed (${res.status})`
+    throw new Error(msg)
+  }
+  const data = await res.json()
+  const gen = data.generations_by_pk
+  return {
+    status: gen.status,
+    videos: (gen.generated_images ?? []).map((img: { url: string }) => img.url),
+  }
+}
+
 export interface GenerationResult {
   status: 'PENDING' | 'COMPLETE' | 'FAILED'
   images: string[]
