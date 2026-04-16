@@ -1,14 +1,9 @@
-import { useState, useEffect } from 'react'
-import type { User } from '@supabase/supabase-js'
+import { useState } from 'react'
 import TipsBanner from './components/TipsBanner'
 import ToggleSection from './components/ToggleSection'
 import ExtrasSelector from './components/ExtrasSelector'
 import PromptPreview from './components/PromptPreview'
-import ImageGenSection from './components/ImageGenSection'
-import VideoTab from './components/VideoTab'
 import SuggestionBox from './components/SuggestionBox'
-import AuthGuard from './components/AuthGuard'
-import ProfileMenu from './components/ProfileMenu'
 import { stripHeadings } from './utils/stripHeadings'
 import { activeClass } from './utils/activeClass'
 
@@ -113,7 +108,7 @@ function assemblePrompt(
   return sections.join('\n\n')
 }
 
-function AppInner({ user }: { user: User }) {
+function AppInner() {
   const [pp, setPp] = useState<ProductPlacement>({
     enabled: false,
     product: 'clear boxes',
@@ -152,20 +147,6 @@ function AppInner({ user }: { user: User }) {
   })
 
   const [activeTab, setActiveTab] = useState<AppTab>('prompt')
-  const [apiTokens, setApiTokens] = useState<number | null>(null)
-
-  useEffect(() => {
-    fetch('/api/credits')
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        const details = data?.user_details?.[0]
-        if (details) {
-          const tokens = (details.apiPaidTokens ?? 0) + (details.apiSubscriptionTokens ?? 0)
-          setApiTokens(tokens)
-        }
-      })
-      .catch(() => {})
-  }, [])
 
   const assembled = assemblePrompt(pp, cc, env, mat, lighting, extras)
   const copyText = stripHeadings(assembled)
@@ -180,14 +161,7 @@ function AppInner({ user }: { user: User }) {
               Fill in the brief on the left — your prompt builds live on the right.
             </p>
           </div>
-          <div className="shrink-0 pt-1 flex items-center gap-3">
-            {apiTokens !== null ? (
-              <span className="text-xs text-neutral-500 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-1">
-                {apiTokens.toLocaleString()} tokens
-              </span>
-            ) : null}
-            <ProfileMenu user={user} />
-          </div>
+          <div className="shrink-0 pt-1" />
         </div>
 
         <TipsBanner />
@@ -306,12 +280,22 @@ function AppInner({ user }: { user: User }) {
 
         {/* Image tab */}
         {activeTab === 'image' ? (
-          <ImageGenSection copyText={copyText} user={user} />
+          <div className="relative flex items-center justify-center py-24">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-neutral-400">Coming soon</p>
+              <p className="text-sm text-neutral-600 mt-1">Image generation is being set up.</p>
+            </div>
+          </div>
         ) : null}
 
         {/* Video tab */}
         {activeTab === 'video' ? (
-          <VideoTab user={user} />
+          <div className="relative flex items-center justify-center py-24">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-neutral-400">Coming soon</p>
+              <p className="text-sm text-neutral-600 mt-1">Video generation is being set up.</p>
+            </div>
+          </div>
         ) : null}
 
         <SuggestionBox />
@@ -321,5 +305,5 @@ function AppInner({ user }: { user: User }) {
 }
 
 export default function App() {
-  return <AuthGuard>{(user) => <AppInner user={user} />}</AuthGuard>
+  return <AppInner />
 }
