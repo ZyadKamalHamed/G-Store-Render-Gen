@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { uploadRender, generateVideo, pollVideo } from '../leonardo'
 import { activeClass } from '../utils/activeClass'
 import { supabase } from '../lib/supabase'
+import { getGuestUserId } from '../guestUser'
 
 type VideoModel = 'VEO3_1' | 'kling-3.0'
 type Status = 'idle' | 'uploading' | 'generating' | 'polling' | 'done' | 'error'
@@ -53,7 +54,8 @@ interface VideoEntry {
   createdAt: number
 }
 
-export default function VideoTab({ user }: { user: User }) {
+export default function VideoTab({ user }: { user?: User }) {
+  const [guestUserId] = useState(getGuestUserId)
   const [sourceMode, setSourceMode] = useState<SourceMode>('upload')
   const [sourceFile, setSourceFile] = useState<File | null>(null)
   const [sourcePreview, setSourcePreview] = useState<string | null>(null)
@@ -75,15 +77,15 @@ export default function VideoTab({ user }: { user: User }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const isGeneratingRef = useRef(false)
+  const userId = user?.id ?? guestUserId
 
-  // Load gallery images from Supabase
   useEffect(() => {
     async function loadGallery() {
       setGalleryLoading(true)
       const { data } = await supabase
         .from('generations')
         .select('image_urls, created_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(50)
       const images: GalleryImage[] = (data ?? []).flatMap((row: { image_urls: string[] }) =>
@@ -93,7 +95,7 @@ export default function VideoTab({ user }: { user: User }) {
       setGalleryLoading(false)
     }
     loadGallery()
-  }, [])
+  }, [userId])
 
   // Reset duration and aspect ratio when model changes
   useEffect(() => {

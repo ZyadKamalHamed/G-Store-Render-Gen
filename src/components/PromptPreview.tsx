@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
+import { getPromptPlatform, isOverPromptLimit, type PromptPlatformId } from '../platformProfiles'
 
 interface PromptPreviewProps {
   assembled: string
   copyText: string
+  platformId: PromptPlatformId
 }
 
-export default function PromptPreview({ assembled, copyText }: PromptPreviewProps) {
+export default function PromptPreview({ assembled, copyText, platformId }: PromptPreviewProps) {
   const [editMode, setEditMode] = useState(false)
-  const [editedText, setEditedText] = useState('')
+  const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState<false | 'ok' | 'fail'>(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -15,12 +17,15 @@ export default function PromptPreview({ assembled, copyText }: PromptPreviewProp
     return () => { if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current) }
   }, [])
 
-  const displayText = editMode ? editedText : assembled
-  const charCount = editMode ? editedText.length : copyText.length
+  const displayText = editedText ?? assembled
+  const copyValue = editedText ?? copyText
+  const charCount = copyValue.length
+  const platform = getPromptPlatform(platformId)
+  const overLimit = isOverPromptLimit(copyValue, platform)
 
   function handleEditToggle() {
     if (!editMode) {
-      setEditedText(assembled)
+      setEditedText(editedText ?? assembled)
       setEditMode(true)
     } else {
       setEditMode(false)
@@ -29,7 +34,7 @@ export default function PromptPreview({ assembled, copyText }: PromptPreviewProp
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(copyText)
+      await navigator.clipboard.writeText(copyValue)
       setCopied('ok')
     } catch {
       setCopied('fail')
@@ -41,14 +46,14 @@ export default function PromptPreview({ assembled, copyText }: PromptPreviewProp
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-2">
-        <span className={`text-xs font-mono tabular-nums ${charCount > 1500 ? 'text-red-400' : 'text-neutral-500'}`}>
-          {charCount} / 1500
+        <span className={`text-xs font-mono tabular-nums ${overLimit ? 'text-red-400' : 'text-neutral-500'}`}>
+          {platform.promptLimit === null ? `${charCount} chars` : `${charCount} / ${platform.promptLimit}`}
         </span>
         <div className="flex items-center gap-2">
           {editMode ? (
             <button
               type="button"
-              onClick={() => setEditedText(assembled)}
+              onClick={() => setEditedText(null)}
               className="text-xs text-neutral-500 hover:text-white transition-colors cursor-pointer"
             >
               Reset
@@ -73,7 +78,7 @@ export default function PromptPreview({ assembled, copyText }: PromptPreviewProp
       </div>
       {editMode ? (
         <textarea
-          value={editedText}
+          value={editedText ?? ''}
           onChange={(e) => setEditedText(e.target.value)}
           className="flex-1 min-h-[520px] bg-neutral-800 border border-neutral-600 rounded-lg px-4 py-3 text-sm text-neutral-100 resize-none focus:outline-none focus:border-neutral-400 font-mono leading-relaxed w-full"
         />

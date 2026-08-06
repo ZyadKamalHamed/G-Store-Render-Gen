@@ -1,9 +1,11 @@
 import { useState } from 'react'
 
 const tips = [
-  'Input image should be 21:9 for best results',
-  'The more iterations you do, the worse the quality — get as much right in the first prompt',
-  'Leonardo settings: Model = Nano Banana 2 or Nano Banana Pro | Dimensions = custom 21:9 wide | Large 4K: 6336×2688 | Max characters: 1500',
+  'Use textured Vectorworks or SketchUp exports where possible. Clay renders force the model to guess materials.',
+  'Enable ambient occlusion or depth shadows so objects read as grounded, not floating.',
+  'Keep the main render high resolution. A short edge of at least 1440px is a good floor.',
+  'Avoid heavy outline clutter on plants and small decor. Keep useful joinery and shelf lines visible.',
+  'Use 16:9 or 21:9 for consistent presentations and before/after comparisons.',
 ]
 
 export default function TipsBanner() {
@@ -14,7 +16,7 @@ export default function TipsBanner() {
   function toggle() {
     const next = !open
     setOpen(next)
-    try { localStorage.setItem('tips-open', String(next)) } catch { }
+    try { localStorage.setItem('tips-open', String(next)) } catch { return }
   }
 
   return (
@@ -26,7 +28,6 @@ export default function TipsBanner() {
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-neutral-300 hover:text-white transition-colors cursor-pointer"
       >
         <span className="flex items-center gap-2">
-          <span>💡</span>
           Tips
         </span>
         <span className={`transition-transform duration-200 text-neutral-500 text-xs ${open ? 'rotate-180' : ''}`}>▾</span>

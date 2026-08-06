@@ -1,10 +1,11 @@
-// Leonardo API client — calls the /api/* proxy routes (Vercel serverless functions)
-// to avoid CORS. The API key lives server-side as LEONARDO_API_KEY.
-
-// Model ID — update this when switching between Nano Banana 2 and Nano Banana Pro
-const MODEL_ID = 'gemini-image-2'
-
-const STYLE_ID = '111dc692-d470-4eec-b791-3475abac4c46'
+// Leonardo API client calls the /api/* proxy routes so the API key stays server-side.
+import {
+  getModelProfile,
+  isValidDimension,
+  type ImageModelId,
+  type ImageQuality,
+  type ReferenceStrength,
+} from './modelProfiles'
 
 // Steps 1+2: Init image + S3 upload (combined server-side to avoid S3 CORS)
 export async function uploadRender(file: File): Promise<string> {
@@ -38,10 +39,78 @@ export async function uploadRender(file: File): Promise<string> {
 }
 
 export interface GenerateSettings {
+  model?: ImageModelId
   width?: number
   height?: number
-  mainStrength?: string
-  refStrength?: string
+  mainStrength?: ReferenceStrength
+  refStrength?: ReferenceStrength
+  referenceStrengths?: ReferenceStrength[]
+  quality?: ImageQuality
+  styleId?: string | null
+  seed?: number
+}
+
+interface UploadedReference {
+  image: {
+    id: string
+    type: 'UPLOADED'
+  }
+  strength?: ReferenceStrength
+}
+
+export function createGenerationBody(
+  mainImageId: string,
+  refImageIds: string[],
+  prompt: string,
+  quantity: number,
+  settings: GenerateSettings = {},
+) {
+  const {
+    model = 'gemini-image-2',
+    width = 1584,
+    height = 672,
+    mainStrength = 'HIGH',
+    refStrength = 'LOW',
+    referenceStrengths = [],
+    quality = 'MEDIUM',
+    styleId = null,
+    seed = Math.floor(Math.random() * 2147483647),
+  } = settings
+  const profile = getModelProfile(model)
+
+  if (!isValidDimension(model, width, height)) {
+    throw new Error(`${profile.label} does not support ${width} x ${height}. Choose one of the listed dimensions.`)
+  }
+
+  const ids = [mainImageId, ...refImageIds]
+  const imageReferences: UploadedReference[] = ids.map((id, index) => {
+    const reference: UploadedReference = { image: { id, type: 'UPLOADED' } }
+    if (profile.supportsReferenceStrength) {
+      reference.strength = index === 0 ? mainStrength : referenceStrengths[index - 1] ?? refStrength
+    }
+    return reference
+  })
+
+  const parameters: Record<string, unknown> = {
+    width,
+    height,
+    prompt,
+    quantity,
+    seed,
+    guidances: {
+      image_reference: imageReferences,
+    },
+    prompt_enhance: 'OFF',
+  }
+
+  if (profile.supportsQuality) parameters.quality = quality
+  if (styleId && profile.id !== 'gpt-image-2') parameters.style_ids = [styleId]
+
+  return {
+    model,
+    parameters,
+    public: false,
+  }
 }
 
 // Step 3: Trigger generation
@@ -52,30 +121,10 @@ export async function generate(
   quantity: number,
   settings: GenerateSettings = {},
 ): Promise<string> {
-  const { width = 1584, height = 672, mainStrength = 'HIGH', refStrength = 'LOW' } = settings
-  const imageReferences = [
-    { image: { id: mainImageId, type: 'UPLOADED' }, strength: mainStrength },
-    ...refImageIds.map((id) => ({ image: { id, type: 'UPLOADED' }, strength: refStrength })),
-  ]
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL_ID,
-      parameters: {
-        width,
-        height,
-        prompt,
-        quantity,
-        seed: Math.floor(Math.random() * 2147483647),
-        guidances: {
-          image_reference: imageReferences,
-        },
-        style_ids: [STYLE_ID],
-        prompt_enhance: 'OFF',
-      },
-      public: false,
-    }),
+    body: JSON.stringify(createGenerationBody(mainImageId, refImageIds, prompt, quantity, settings)),
   })
   if (!res.ok) {
     const errData = await res.json().catch(() => null)
